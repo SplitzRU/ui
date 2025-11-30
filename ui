@@ -72,6 +72,20 @@ local function Padding(parent, t, r, b, l)
     return p
 end
 
+-- Get scaled text size to fit width
+local TextService = game:GetService("TextService")
+local function GetScaledTextSize(text, font, maxSize, maxWidth)
+    local size = maxSize
+    while size > 8 do
+        local bounds = TextService:GetTextSize(text, size, font, Vector2.new(1000, 100))
+        if bounds.X <= maxWidth then
+            return size
+        end
+        size = size - 1
+    end
+    return 8
+end
+
 -- Config helpers
 local function ensureFolder()
     if makefolder and isfolder and not isfolder(CONFIG_FOLDER) then
@@ -795,6 +809,9 @@ end
 function Library:AddToggle(options)
     local parent = self._currentSection or self._currentContent
     local configKey = options.ConfigKey or options.Name
+    local labelText = options.Name or "Toggle"
+    local labelWidth = 120
+    local textSize = GetScaledTextSize(labelText, Enum.Font.Gotham, 13, labelWidth)
     
     local frame = Instance.new("Frame")
     frame.Name = "Toggle"
@@ -806,9 +823,9 @@ function Library:AddToggle(options)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -50, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = options.Name or "Toggle"
+    label.Text = labelText
     label.TextColor3 = Theme.Text
-    label.TextSize = 13
+    label.TextSize = textSize
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
@@ -886,6 +903,9 @@ function Library:AddSlider(options)
     local max = options.Max or 100
     local default = options.Default or min
     local value = default
+    local labelText = options.Name or "Slider"
+    local labelWidth = 70
+    local textSize = GetScaledTextSize(labelText, Enum.Font.Gotham, 13, labelWidth)
     
     local frame = Instance.new("Frame")
     frame.Name = "Slider"
@@ -897,9 +917,9 @@ function Library:AddSlider(options)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.35, 0, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = options.Name or "Slider"
+    label.Text = labelText
     label.TextColor3 = Theme.Text
-    label.TextSize = 13
+    label.TextSize = textSize
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
@@ -920,9 +940,9 @@ function Library:AddSlider(options)
     valueBox.Parent = frame
     Corner(valueBox, 4)
     
-    -- Track (between label and value box, close to value)
+    -- Track (between label and value box)
     local track = Instance.new("Frame")
-    track.Size = UDim2.new(0.65, -60, 0, 6)  -- Long track, small gap before value
+    track.Size = UDim2.new(0.65, -60, 0, 6)
     track.Position = UDim2.new(0.35, 0, 0.5, 0)
     track.AnchorPoint = Vector2.new(0, 0.5)
     track.BackgroundColor3 = Theme.Toggle
@@ -1013,6 +1033,9 @@ end
 -- Simple button (inside section)
 function Library:AddButton(options)
     local parent = self._currentSection or self._currentContent
+    local labelText = options.Name or "Button"
+    local labelWidth = 120
+    local textSize = GetScaledTextSize(labelText, Enum.Font.Gotham, 13, labelWidth)
     
     local frame = Instance.new("Frame")
     frame.Name = "Button"
@@ -1024,9 +1047,9 @@ function Library:AddButton(options)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -60, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = options.Name or "Button"
+    label.Text = labelText
     label.TextColor3 = Theme.Text
-    label.TextSize = 13
+    label.TextSize = textSize
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
@@ -1084,6 +1107,9 @@ function Library:AddDropdown(options)
     local open = false
     local closedHeight = 38
     local optionsHeight = #(options.Options or {}) * 28 + 10
+    local labelText = options.Name or "Dropdown"
+    local labelWidth = 90
+    local textSize = GetScaledTextSize(labelText, Enum.Font.Gotham, 13, labelWidth)
     
     local frame = Instance.new("Frame")
     frame.Name = "Dropdown"
@@ -1096,9 +1122,9 @@ function Library:AddDropdown(options)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.45, 0, 0, 38)
     label.BackgroundTransparency = 1
-    label.Text = options.Name or "Dropdown"
+    label.Text = labelText
     label.TextColor3 = Theme.Text
-    label.TextSize = 13
+    label.TextSize = textSize
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
@@ -1242,6 +1268,9 @@ function Library:AddKeybind(options)
     local configKey = options.ConfigKey or options.Name
     local key = options.Default
     local listening = false
+    local labelText = options.Name or "Keybind"
+    local labelWidth = 100
+    local textSize = GetScaledTextSize(labelText, Enum.Font.Gotham, 13, labelWidth)
     
     local frame = Instance.new("Frame")
     frame.Name = "Keybind"
@@ -1253,9 +1282,9 @@ function Library:AddKeybind(options)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -70, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = options.Name or "Keybind"
+    label.Text = labelText
     label.TextColor3 = Theme.Text
-    label.TextSize = 13
+    label.TextSize = textSize
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
@@ -1327,6 +1356,9 @@ end
 function Library:AddTextbox(options)
     local parent = self._currentSection or self._currentContent
     local configKey = options.ConfigKey or options.Name
+    local labelText = options.Name or "Input"
+    local labelWidth = 70
+    local textSize = GetScaledTextSize(labelText, Enum.Font.Gotham, 13, labelWidth)
     
     local frame = Instance.new("Frame")
     frame.Name = "Textbox"
@@ -1338,9 +1370,9 @@ function Library:AddTextbox(options)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.35, 0, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = options.Name or "Input"
+    label.Text = labelText
     label.TextColor3 = Theme.Text
-    label.TextSize = 13
+    label.TextSize = textSize
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
