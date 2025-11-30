@@ -9,8 +9,16 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
+
+-- Mobile detection
+local function isMobile()
+    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+local IS_MOBILE = isMobile()
 
 -- Animation presets
 local TWEEN_FAST = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -169,11 +177,11 @@ function Library.new(title)
     screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screen.Parent = playerGui
     
-    -- Shadow (equal on all sides)
+    -- Shadow (will be sized after mobile scaling is calculated)
     local shadow = Instance.new("ImageLabel")
     shadow.Name = "Shadow"
     shadow.Size = UDim2.new(0, 820, 0, 540)
-    shadow.Position = UDim2.new(0.5, 0, 0.5, 0)  -- Centered, equal shadow all sides
+    shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
     shadow.AnchorPoint = Vector2.new(0.5, 0.5)
     shadow.BackgroundTransparency = 1
     shadow.Image = "rbxassetid://6014261993"
@@ -191,7 +199,7 @@ function Library.new(title)
     loadingBg.Position = UDim2.new(0.5, 0, 0.5, 0)
     loadingBg.AnchorPoint = Vector2.new(0.5, 0.5)
     loadingBg.BackgroundColor3 = Theme.Background
-    loadingBg.BackgroundTransparency = 0.1
+    loadingBg.BackgroundTransparency = 0
     loadingBg.BorderSizePixel = 0
     loadingBg.ZIndex = 10
     loadingBg.Parent = screen
@@ -270,10 +278,32 @@ function Library.new(title)
         {text = "Done!", progress = 1}
     }
     
+    -- Mobile scaling
+    local mobileScale = 1
+    local windowWidth = 780
+    local windowHeight = 500
+    local sidebarWidth = 150
+    
+    if IS_MOBILE then
+        local viewportSize = workspace.CurrentCamera.ViewportSize
+        local inset = GuiService:GetGuiInset()
+        local safeWidth = viewportSize.X - 20
+        local safeHeight = viewportSize.Y - inset.Y - 20
+        
+        -- Scale to fit screen while maintaining aspect ratio
+        local scaleX = safeWidth / windowWidth
+        local scaleY = safeHeight / windowHeight
+        mobileScale = math.min(scaleX, scaleY, 1)
+        
+        windowWidth = math.floor(windowWidth * mobileScale)
+        windowHeight = math.floor(windowHeight * mobileScale)
+        sidebarWidth = math.floor(150 * mobileScale)
+    end
+    
     -- Main window (container only, no background)
     local window = Instance.new("Frame")
     window.Name = "Window"
-    window.Size = UDim2.new(0, 780, 0, 500)
+    window.Size = UDim2.new(0, windowWidth, 0, windowHeight)
     window.Position = UDim2.new(0.5, 0, 0.5, 0)
     window.AnchorPoint = Vector2.new(0.5, 0.5)
     window.BackgroundTransparency = 1
@@ -283,13 +313,58 @@ function Library.new(title)
     window.Visible = false
     window.Parent = screen
     
+    -- Mobile toggle button (only on mobile)
+    local mobileToggleBtn
+    local uiVisible = true
+    
+    if IS_MOBILE then
+        mobileToggleBtn = Instance.new("TextButton")
+        mobileToggleBtn.Name = "MobileToggle"
+        mobileToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+        mobileToggleBtn.Position = UDim2.new(0, 15, 1, -65)
+        mobileToggleBtn.BackgroundColor3 = Theme.Background
+        mobileToggleBtn.Text = "OT"
+        mobileToggleBtn.TextColor3 = Theme.Text
+        mobileToggleBtn.TextSize = 14
+        mobileToggleBtn.Font = Enum.Font.GothamBold
+        mobileToggleBtn.BorderSizePixel = 0
+        mobileToggleBtn.AutoButtonColor = false
+        mobileToggleBtn.ZIndex = 100
+        mobileToggleBtn.Visible = false
+        mobileToggleBtn.Parent = screen
+        Corner(mobileToggleBtn, 25) -- Make it circular
+        Stroke(mobileToggleBtn, Theme.Border, 2)
+        
+        mobileToggleBtn.MouseButton1Click:Connect(function()
+            uiVisible = not uiVisible
+            if uiVisible then
+                window.Visible = true
+                shadow.Visible = true
+                Tween(window, {Position = UDim2.new(0.5, 0, 0.5, 0)}, TWEEN_SMOOTH)
+                Tween(shadow, {ImageTransparency = 0.5}, TWEEN_SMOOTH)
+            else
+                Tween(window, {Position = UDim2.new(0.5, 0, 1.5, 0)}, TWEEN_SMOOTH)
+                Tween(shadow, {ImageTransparency = 1}, TWEEN_SMOOTH)
+                task.delay(0.25, function()
+                    if not uiVisible then
+                        window.Visible = false
+                        shadow.Visible = false
+                    end
+                end)
+            end
+        end)
+    end
+    
+    -- Update shadow size for mobile
+    shadow.Size = UDim2.new(0, windowWidth + 40, 0, windowHeight + 40)
+    
     -- Top bar
     local topBar = Instance.new("Frame")
     topBar.Name = "TopBar"
     topBar.Size = UDim2.new(1, 0, 0, 36)
     topBar.Position = UDim2.new(0, 0, 0, 0)
     topBar.BackgroundColor3 = Theme.TopBar
-    topBar.BackgroundTransparency = 0.1
+    topBar.BackgroundTransparency = 0
     topBar.BorderSizePixel = 0
     topBar.Parent = window
     
@@ -326,8 +401,11 @@ function Library.new(title)
         Tween(closeBtn, {BackgroundTransparency = 1, TextColor3 = Theme.TextDim}, TWEEN_FAST)
     end)
     closeBtn.MouseButton1Click:Connect(function()
-        Tween(window, {Size = UDim2.new(0, 780, 0, 0)}, TWEEN_SMOOTH)
+        Tween(window, {Size = UDim2.new(0, windowWidth, 0, 0)}, TWEEN_SMOOTH)
         Tween(shadow, {ImageTransparency = 1}, TWEEN_SMOOTH)
+        if mobileToggleBtn then
+            mobileToggleBtn.Visible = false
+        end
         task.delay(0.3, function() screen:Destroy() end)
     end)
     
@@ -346,7 +424,8 @@ function Library.new(title)
     minBtn.Parent = topBar
     
     local minimized = false
-    local fullSize = UDim2.new(0, 780, 0, 500)
+    local fullSize = UDim2.new(0, windowWidth, 0, windowHeight)
+    local topBarHeight = 36
     
     minBtn.MouseEnter:Connect(function()
         Tween(minBtn, {BackgroundTransparency = 0, TextColor3 = Theme.Text}, TWEEN_FAST)
@@ -357,21 +436,22 @@ function Library.new(title)
     minBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
-            Tween(window, {Size = UDim2.new(0, 780, 0, 36)}, TWEEN_SMOOTH)
-            Tween(shadow, {Size = UDim2.new(0, 820, 0, 80)}, TWEEN_SMOOTH)
+            Tween(window, {Size = UDim2.new(0, windowWidth, 0, topBarHeight)}, TWEEN_SMOOTH)
+            Tween(shadow, {Size = UDim2.new(0, windowWidth + 40, 0, topBarHeight + 44)}, TWEEN_SMOOTH)
         else
             Tween(window, {Size = fullSize}, TWEEN_SMOOTH)
-            Tween(shadow, {Size = UDim2.new(0, 820, 0, 540)}, TWEEN_SMOOTH)
+            Tween(shadow, {Size = UDim2.new(0, windowWidth + 40, 0, windowHeight + 40)}, TWEEN_SMOOTH)
         end
     end)
     
     -- Sidebar (below top bar)
+    local sidebarActualWidth = IS_MOBILE and sidebarWidth or 180
     local sidebar = Instance.new("Frame")
     sidebar.Name = "Sidebar"
-    sidebar.Size = UDim2.new(0, 180, 1, -36)
+    sidebar.Size = UDim2.new(0, sidebarActualWidth, 1, -36)
     sidebar.Position = UDim2.new(0, 0, 0, 36)
     sidebar.BackgroundColor3 = Theme.Sidebar
-    sidebar.BackgroundTransparency = 0.1
+    sidebar.BackgroundTransparency = 0
     sidebar.BorderSizePixel = 0
     sidebar.Parent = window
     
@@ -463,19 +543,19 @@ function Library.new(title)
     -- Content area (below top bar, right of sidebar)
     local content = Instance.new("Frame")
     content.Name = "Content"
-    content.Size = UDim2.new(1, -180, 1, -36)
-    content.Position = UDim2.new(0, 180, 0, 36)
+    content.Size = UDim2.new(1, -sidebarActualWidth, 1, -36)
+    content.Position = UDim2.new(0, sidebarActualWidth, 0, 36)
     content.BackgroundColor3 = Theme.Background
-    content.BackgroundTransparency = 0.1
+    content.BackgroundTransparency = 0
     content.BorderSizePixel = 0
     content.ClipsDescendants = true
     content.Parent = window
     
-    -- Drag functionality (drag from top bar)
+    -- Drag functionality (drag from top bar) - supports touch
     local dragging, dragStart, startPos
     
     topBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = window.Position
@@ -483,7 +563,7 @@ function Library.new(title)
     end)
     
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
             local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             window.Position = newPos
@@ -492,7 +572,7 @@ function Library.new(title)
     end)
     
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
@@ -509,6 +589,8 @@ function Library.new(title)
     self._visible = true
     self._configValues = {}
     self._configCallbacks = {}
+    self._mobileToggleBtn = mobileToggleBtn
+    self._isMobile = IS_MOBILE
     
     -- Toggle visibility
     UserInputService.InputBegan:Connect(function(input, processed)
@@ -558,6 +640,11 @@ function Library.new(title)
         -- Show main window with fade in
         window.Visible = true
         Tween(shadow, {ImageTransparency = 0.5}, TWEEN_SMOOTH)
+        
+        -- Show mobile toggle button
+        if mobileToggleBtn then
+            mobileToggleBtn.Visible = true
+        end
         
         -- Fade in all UI elements (skip avatar)
         for _, child in pairs(window:GetDescendants()) do
@@ -692,7 +779,7 @@ function Library:AddTab(name)
         end
         tabContent.Visible = true
         self._activeTab = tab
-        Tween(tabBtn, {BackgroundTransparency = 0.1, TextColor3 = Theme.Text}, TWEEN_FAST)
+        Tween(tabBtn, {BackgroundTransparency = 0, TextColor3 = Theme.Text}, TWEEN_FAST)
         Tween(indicator, {Size = UDim2.new(0, 3, 0, 20)}, TWEEN_SMOOTH)
     end
     
@@ -700,7 +787,7 @@ function Library:AddTab(name)
     
     tabBtn.MouseEnter:Connect(function()
         if self._activeTab ~= tab then
-            Tween(tabBtn, {BackgroundTransparency = 0.1}, TWEEN_FAST)
+            Tween(tabBtn, {BackgroundTransparency = 0}, TWEEN_FAST)
         end
     end)
     tabBtn.MouseLeave:Connect(function()
@@ -757,7 +844,7 @@ function Library:AddSection(title)
     sectionFrame.Size = UDim2.new(0.5, -6, 0, 0) -- Half width minus half gap
     sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
     sectionFrame.BackgroundColor3 = Theme.Section
-    sectionFrame.BackgroundTransparency = 0.1
+    sectionFrame.BackgroundTransparency = 0
     sectionFrame.BorderSizePixel = 0
     sectionFrame.LayoutOrder = self._rowSectionCount
     sectionFrame.Parent = self._currentRow
@@ -836,7 +923,7 @@ function Library:AddToggle(options)
     toggleBg.Position = UDim2.new(1, 0, 0.5, 0)
     toggleBg.AnchorPoint = Vector2.new(1, 0.5)
     toggleBg.BackgroundColor3 = Theme.Toggle
-    toggleBg.BackgroundTransparency = 0.1
+    toggleBg.BackgroundTransparency = 0
     toggleBg.Text = ""
     toggleBg.BorderSizePixel = 0
     toggleBg.AutoButtonColor = false
@@ -930,7 +1017,7 @@ function Library:AddSlider(options)
     valueBox.Position = UDim2.new(1, 0, 0.5, 0)
     valueBox.AnchorPoint = Vector2.new(1, 0.5)
     valueBox.BackgroundColor3 = Theme.Input
-    valueBox.BackgroundTransparency = 0.1
+    valueBox.BackgroundTransparency = 0
     valueBox.Text = tostring(value)
     valueBox.TextColor3 = Theme.Text
     valueBox.TextSize = 11
@@ -946,7 +1033,7 @@ function Library:AddSlider(options)
     track.Position = UDim2.new(0.35, 0, 0.5, 0)
     track.AnchorPoint = Vector2.new(0, 0.5)
     track.BackgroundColor3 = Theme.Toggle
-    track.BackgroundTransparency = 0.1
+    track.BackgroundTransparency = 0
     track.BorderSizePixel = 0
     track.Parent = frame
     Corner(track, 3)
@@ -992,26 +1079,27 @@ function Library:AddSlider(options)
     end
     
     track.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             sliding = true
             update(input)
         end
     end)
     
     knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             sliding = true
+            update(input)
         end
     end)
     
     UserInputService.InputChanged:Connect(function(input)
-        if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             update(input)
         end
     end)
     
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             sliding = false
         end
     end)
@@ -1060,7 +1148,7 @@ function Library:AddButton(options)
     btn.Position = UDim2.new(1, 0, 0.5, 0)
     btn.AnchorPoint = Vector2.new(1, 0.5)
     btn.BackgroundColor3 = Theme.Toggle
-    btn.BackgroundTransparency = 0.1
+    btn.BackgroundTransparency = 0
     btn.Text = ""
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
@@ -1134,7 +1222,7 @@ function Library:AddDropdown(options)
     dropBtn.Size = UDim2.new(0.52, 0, 0, 28)
     dropBtn.Position = UDim2.new(0.48, 0, 0, 5)
     dropBtn.BackgroundColor3 = Theme.Input
-    dropBtn.BackgroundTransparency = 0.1
+    dropBtn.BackgroundTransparency = 0
     dropBtn.Text = ""
     dropBtn.BorderSizePixel = 0
     dropBtn.AutoButtonColor = false
@@ -1181,7 +1269,7 @@ function Library:AddDropdown(options)
         local optBtn = Instance.new("TextButton")
         optBtn.Size = UDim2.new(1, 0, 0, 26)
         optBtn.BackgroundColor3 = Theme.Input
-        optBtn.BackgroundTransparency = 0.1
+        optBtn.BackgroundTransparency = 0
         optBtn.Text = opt
         optBtn.TextColor3 = Theme.Text
         optBtn.TextSize = 12
@@ -1294,7 +1382,7 @@ function Library:AddKeybind(options)
     keyBtn.Position = UDim2.new(1, 0, 0.5, 0)
     keyBtn.AnchorPoint = Vector2.new(1, 0.5)
     keyBtn.BackgroundColor3 = Theme.Input
-    keyBtn.BackgroundTransparency = 0.1
+    keyBtn.BackgroundTransparency = 0
     keyBtn.Text = key and key.Name or "None"
     keyBtn.TextColor3 = Theme.Text
     keyBtn.TextSize = 11
@@ -1382,7 +1470,7 @@ function Library:AddTextbox(options)
     inputBox.Position = UDim2.new(0.38, 0, 0.5, 0)
     inputBox.AnchorPoint = Vector2.new(0, 0.5)
     inputBox.BackgroundColor3 = Theme.Input
-    inputBox.BackgroundTransparency = 0.1
+    inputBox.BackgroundTransparency = 0
     inputBox.Text = options.Default or ""
     inputBox.PlaceholderText = options.Placeholder or "Type..."
     inputBox.PlaceholderColor3 = Theme.TextDim
