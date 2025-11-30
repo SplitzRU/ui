@@ -1424,3 +1424,5 @@ function Library:AddLabel(text)
         end
     }
 end
+
+return Library
