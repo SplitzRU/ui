@@ -538,6 +538,7 @@ function Library.new(title)
     
     local tabLayout = Instance.new("UIListLayout")
     tabLayout.Padding = UDim.new(0, 4)
+    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
     tabLayout.Parent = tabHolder
     
     -- Content area (below top bar, right of sidebar)
@@ -591,6 +592,7 @@ function Library.new(title)
     self._configCallbacks = {}
     self._mobileToggleBtn = mobileToggleBtn
     self._isMobile = IS_MOBILE
+    self._tabOrder = 0
     
     -- Toggle visibility
     UserInputService.InputBegan:Connect(function(input, processed)
@@ -712,6 +714,8 @@ function Library:GetConfigs()
 end
 
 function Library:AddTab(name)
+    self._tabOrder = self._tabOrder + 1
+    
     local tabBtn = Instance.new("TextButton")
     tabBtn.Name = "Tab_" .. name
     tabBtn.Size = UDim2.new(1, -8, 0, 36)
@@ -723,6 +727,7 @@ function Library:AddTab(name)
     tabBtn.Font = Enum.Font.GothamMedium
     tabBtn.BorderSizePixel = 0
     tabBtn.AutoButtonColor = false
+    tabBtn.LayoutOrder = self._tabOrder
     tabBtn.Parent = self._tabHolder
     Corner(tabBtn, 6)
     
