@@ -1504,4 +1504,4 @@ function Library:SettingsTab()
     return settings
 end
 
-
+return Library
