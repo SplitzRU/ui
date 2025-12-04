@@ -13,6 +13,48 @@ local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
 
+-- Compatibility functions for lower-level executors
+local function taskSpawn(func)
+    if task and task.spawn then
+        return task.spawn(func)
+    elseif spawn then
+        return spawn(func)
+    else
+        return coroutine.wrap(func)()
+    end
+end
+
+local function taskDelay(delayTime, func)
+    if task and task.delay then
+        return task.delay(delayTime, func)
+    elseif delay then
+        return delay(delayTime, func)
+    else
+        spawn(function()
+            wait(delayTime)
+            func()
+        end)
+    end
+end
+
+local function taskWait(delay)
+    if task and task.wait then
+        return task.wait(delay)
+    else
+        return wait(delay)
+    end
+end
+
+local function taskDefer(func)
+    if task and task.defer then
+        return task.defer(func)
+    elseif delay then
+        return delay(0, func)
+    else
+        spawn(func)
+    end
+end
+
 -- Mobile detection
 local function isMobile()
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -345,7 +387,7 @@ function Library.new(title)
             else
                 Tween(window, {Position = UDim2.new(0.5, 0, 1.5, 0)}, TWEEN_SMOOTH)
                 Tween(shadow, {ImageTransparency = 1}, TWEEN_SMOOTH)
-                task.delay(0.25, function()
+                taskDelay(0.25, function()
                     if not uiVisible then
                         window.Visible = false
                         shadow.Visible = false
@@ -406,7 +448,7 @@ function Library.new(title)
         if mobileToggleBtn then
             mobileToggleBtn.Visible = false
         end
-        task.delay(0.3, function() screen:Destroy() end)
+        taskDelay(0.3, function() screen:Destroy() end)
     end)
     
     -- Minimize button
@@ -481,7 +523,7 @@ function Library.new(title)
     Corner(avatarImage, 23)
     
     -- Load avatar thumbnail async
-    task.spawn(function()
+    taskSpawn(function()
         local success, content = pcall(function()
             return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
         end)
@@ -605,15 +647,15 @@ function Library.new(title)
     -- Intro animation with loading screen
     shadow.ImageTransparency = 1
     
-    task.defer(function()
+    taskDefer(function()
         -- Animate through loading stages
         for i, stage in ipairs(loadingStages) do
             loadingText.Text = stage.text
             Tween(progressFill, {Size = UDim2.new(stage.progress, 0, 1, 0)}, TweenInfo.new(0.2))
-            task.wait(0.25)
+            taskWait(0.25)
         end
         
-        task.wait(0.2)
+        taskWait(0.2)
         
         -- Fade out loading
         Tween(loadingBg, {BackgroundTransparency = 1}, TWEEN_SMOOTH)
@@ -622,7 +664,7 @@ function Library.new(title)
         Tween(spinner, {ImageTransparency = 1}, TWEEN_SMOOTH)
         Tween(progressBg, {BackgroundTransparency = 1}, TWEEN_SMOOTH)
         Tween(progressFill, {BackgroundTransparency = 1}, TWEEN_SMOOTH)
-        task.wait(0.3)
+        taskWait(0.3)
         
         -- Stop spinner and remove loading
         spinConnection:Disconnect()
@@ -1181,7 +1223,7 @@ function Library:AddButton(options)
     btn.MouseButton1Click:Connect(function()
         -- Click animation
         Tween(dot, {Size = UDim2.new(0, 12, 0, 12)}, TWEEN_FAST)
-        task.delay(0.1, function()
+        taskDelay(0.1, function()
             Tween(dot, {Size = UDim2.new(0, 8, 0, 8)}, TWEEN_FAST)
         end)
         if options.Callback then
