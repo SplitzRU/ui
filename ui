@@ -766,7 +766,7 @@ function Library.new(opts)
         end)
     end
     
-    -- Dragging
+    -- Dragging (supports both mouse and touch for mobile)
     local dragging, dragInput, dragStart, startPos
     local blockDrag = false -- Flag to block window drag when using sliders/other elements
     Window._blockDrag = function(val) blockDrag = val end
@@ -776,12 +776,14 @@ function Library.new(opts)
         Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
     
-    -- Only allow dragging from the sidebar area (top portion)
+    -- Only allow dragging from the sidebar area
     Sidebar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and not blockDrag then
+        -- Support both mouse and touch for mobile
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not blockDrag then
             dragging = true
             dragStart = input.Position
             startPos = Main.Position
+            dragInput = input
             
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
@@ -792,14 +794,20 @@ function Library.new(opts)
     end)
     
     Sidebar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
+        -- Support both mouse and touch
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if dragging then
+                dragInput = input
+            end
         end
     end)
     
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging and not blockDrag then
-            updateDrag(input)
+        -- Support both mouse and touch movement
+        if dragging and not blockDrag then
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                updateDrag(input)
+            end
         end
     end)
     
@@ -3135,29 +3143,30 @@ end
         local mobileToggleMoved = false
         local uiVisible = true
         
+        -- Position at TOP-RIGHT corner so it's always visible above the UI
         local MobileToggle = Utility:Create("TextButton", {
             Name = "MobileToggle",
-            Size = UDim2.new(0, 50, 0, 50),
-            Position = UDim2.new(0, 15, 1, -70),
-            BackgroundColor3 = Theme.Background,
+            Size = UDim2.new(0, 44, 0, 44),
+            Position = UDim2.new(1, -55, 0, 10), -- Top-right corner
+            BackgroundColor3 = Theme.Accent,
             BackgroundTransparency = 0.1,
             Text = "",
             AutoButtonColor = false,
-            ZIndex = 100,
+            ZIndex = 9999, -- Very high ZIndex to always be on top
             Parent = ScreenGui
         })
-        Utility:Corner(MobileToggle, 25)
-        Utility:Stroke(MobileToggle, Theme.Accent, 2)
+        Utility:Corner(MobileToggle, 22)
+        Utility:Stroke(MobileToggle, Theme.Text, 2)
         
-        -- Icon inside
+        -- Icon inside (eye icon for show/hide)
         local MobileIcon = Utility:Create("TextLabel", {
             Size = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
-            Text = "◉",
-            TextColor3 = Theme.Accent,
+            Text = "👁", -- Eye icon
+            TextColor3 = Theme.Background,
             Font = Enum.Font.GothamBold,
-            TextSize = 24,
-            ZIndex = 101,
+            TextSize = 20,
+            ZIndex = 10000,
             Parent = MobileToggle
         })
         
@@ -3170,7 +3179,7 @@ end
                 mobileToggleStartPos = MobileToggle.Position
                 
                 -- Scale down on touch
-                Utility:Tween(MobileToggle, TweenInfo.new(0.1), {Size = UDim2.new(0, 45, 0, 45)})
+                Utility:Tween(MobileToggle, TweenInfo.new(0.1), {Size = UDim2.new(0, 40, 0, 40)})
             end
         end)
         
@@ -3195,17 +3204,19 @@ end
                 mobileToggleDragging = false
                 
                 -- Scale back
-                Utility:Tween(MobileToggle, TweenInfo.new(0.15, Enum.EasingStyle.Back), {Size = UDim2.new(0, 50, 0, 50)})
+                Utility:Tween(MobileToggle, TweenInfo.new(0.15, Enum.EasingStyle.Back), {Size = UDim2.new(0, 44, 0, 44)})
                 
                 -- Only toggle if not dragged
                 if not mobileToggleMoved then
                     uiVisible = not uiVisible
                     if uiVisible then
                         Open()
-                        Utility:Tween(MobileIcon, TweenInfo.new(0.2), {TextColor3 = Theme.Accent})
+                        MobileIcon.Text = "👁"
+                        Utility:Tween(MobileToggle, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Accent})
                     else
                         Close()
-                        Utility:Tween(MobileIcon, TweenInfo.new(0.2), {TextColor3 = Theme.SubText})
+                        MobileIcon.Text = "👁‍🗨"
+                        Utility:Tween(MobileToggle, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element})
                     end
                 end
             end
