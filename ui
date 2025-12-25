@@ -1105,53 +1105,80 @@ function Library.new(opts)
         local TabObj = {Btn = Btn, Page = Page, Indicator = Indicator, Title = Title, Icon = IconLbl}
         Window.Tabs[name] = TabObj
         
-        -- Tab tracking for section rows
-        local currentRow = nil
-        local rowSectionCount = 0
-        local rowOrder = 0
+        -- Two-column layout: sections flow independently (no height matching)
+        local ColumnsContainer = Utility:Create("Frame", {
+            Name = "ColumnsContainer",
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            Parent = Page
+        })
+        
+        -- Left column
+        local LeftColumn = Utility:Create("Frame", {
+            Name = "LeftColumn",
+            Size = UDim2.new(0.5, -6, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            Position = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1,
+            Parent = ColumnsContainer
+        })
+        Utility:Create("UIListLayout", {
+            Padding = UDim.new(0, 12),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = LeftColumn
+        })
+        
+        -- Right column
+        local RightColumn = Utility:Create("Frame", {
+            Name = "RightColumn",
+            Size = UDim2.new(0.5, -6, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            Position = UDim2.new(0.5, 6, 0, 0),
+            BackgroundTransparency = 1,
+            Parent = ColumnsContainer
+        })
+        Utility:Create("UIListLayout", {
+            Padding = UDim.new(0, 12),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = RightColumn
+        })
+        
+        -- Track which column to add next section to
+        local sectionCount = 0
+        
+        -- Update container height based on tallest column
+        local function updateContainerHeight()
+            task.defer(function()
+                local leftHeight = LeftColumn.AbsoluteSize.Y
+                local rightHeight = RightColumn.AbsoluteSize.Y
+                ColumnsContainer.Size = UDim2.new(1, 0, 0, math.max(leftHeight, rightHeight))
+            end)
+        end
         
         -- Tab Methods
         function Tab:AddSection(title)
             local Section = {}
             
-            -- Check if we need a new row (every 2 sections)
-            if not currentRow or rowSectionCount >= 2 then
-                rowOrder = rowOrder + 1
-                
-                -- Create new row
-                local Row = Utility:Create("Frame", {
-                    Name = "Row",
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    LayoutOrder = rowOrder,
-                    Parent = Page
-                })
-                
-                Utility:Create("UIListLayout", {
-                    Padding = UDim.new(0, 12),
-                    FillDirection = Enum.FillDirection.Horizontal,
-                    SortOrder = Enum.SortOrder.LayoutOrder,
-                    Parent = Row
-                })
-                
-                currentRow = Row
-                rowSectionCount = 0
-            end
+            -- Alternate between left and right columns
+            sectionCount = sectionCount + 1
+            local targetColumn = (sectionCount % 2 == 1) and LeftColumn or RightColumn
             
-            rowSectionCount = rowSectionCount + 1
-            
-            -- Section box (half width minus gap)
+            -- Section box (full width of column)
             local Container = Utility:Create("Frame", {
                 Name = "Section_" .. title,
-                Size = UDim2.new(0.5, -6, 0, 0),
+                Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundColor3 = Theme.Section,
-                LayoutOrder = rowSectionCount,
-                Parent = currentRow
+                LayoutOrder = math.ceil(sectionCount / 2),
+                Parent = targetColumn
             })
             Utility:Corner(Container, 8)
             Utility:Stroke(Container, Theme.Outline, 1)
+            
+            -- Update parent container height when section changes
+            Container:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateContainerHeight)
+            updateContainerHeight()
             
             -- Header
             local Header = Utility:Create("TextLabel", {
