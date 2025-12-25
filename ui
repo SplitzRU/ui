@@ -266,10 +266,23 @@ function Library.new(opts)
         end
     end
     
+    -- Responsive sizing for mobile vs desktop
+    local screenSize = workspace.CurrentCamera.ViewportSize
+    local mainSize
+    if IS_MOBILE then
+        -- Mobile: Use percentage of screen, max out at reasonable size
+        local width = math.min(screenSize.X * 0.95, 780)
+        local height = math.min(screenSize.Y * 0.85, 500)
+        mainSize = UDim2.new(0, width, 0, height)
+    else
+        -- Desktop: Fixed size
+        mainSize = UDim2.new(0, 780, 0, 500)
+    end
+    
     -- Main Container
     local Main = Utility:Create("Frame", {
         Name = "Main",
-        Size = UDim2.new(0, 780, 0, 500),
+        Size = mainSize,
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Theme.Background,
@@ -278,8 +291,18 @@ function Library.new(opts)
         Parent = ScreenGui,
         ClipsDescendants = true
     })
-    Utility:Corner(Main, 12)
+    Utility:Corner(Main, IS_MOBILE and 8 or 12)
     Utility:Stroke(Main, Theme.Outline, 1)
+    
+    -- Handle screen rotation/resize on mobile
+    if IS_MOBILE then
+        workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+            local newScreenSize = workspace.CurrentCamera.ViewportSize
+            local newWidth = math.min(newScreenSize.X * 0.95, 780)
+            local newHeight = math.min(newScreenSize.Y * 0.85, 500)
+            Main.Size = UDim2.new(0, newWidth, 0, newHeight)
+        end)
+    end
     
     -- Scale for open animation
     local Scale = Utility:Create("UIScale", {
@@ -288,16 +311,17 @@ function Library.new(opts)
     })
     
     --// Layout
-    -- Sidebar
+    -- Sidebar (narrower on mobile)
+    local sidebarWidth = IS_MOBILE and 140 or 180
     local Sidebar = Utility:Create("Frame", {
         Name = "Sidebar",
-        Size = UDim2.new(0, 180, 1, 0),
+        Size = UDim2.new(0, sidebarWidth, 1, 0),
         BackgroundColor3 = Theme.Sidebar,
         BorderSizePixel = 0,
         Parent = Main,
         ZIndex = 2
     })
-    Utility:Corner(Sidebar, 12)
+    Utility:Corner(Sidebar, IS_MOBILE and 8 or 12)
     
     local SideCover = Utility:Create("Frame", {
         Size = UDim2.new(0, 10, 1, 0),
@@ -374,11 +398,11 @@ function Library.new(opts)
         Parent = NavScroll
     })
     
-    -- Content Area
+    -- Content Area (adjusts based on sidebar width)
     local Content = Utility:Create("Frame", {
         Name = "Content",
-        Size = UDim2.new(1, -180, 1, 0),
-        Position = UDim2.new(0, 180, 0, 0),
+        Size = UDim2.new(1, -sidebarWidth, 1, 0),
+        Position = UDim2.new(0, sidebarWidth, 0, 0),
         BackgroundTransparency = 1,
         Parent = Main
     })
@@ -445,12 +469,13 @@ function Library.new(opts)
         Visible = true
     })
     
-    -- 3D Character Viewport
+    -- 3D Character Viewport (hidden on mobile to save space)
     local Viewport = Utility:Create("ViewportFrame", {
         Size = UDim2.new(0, 250, 0, 350),
         Position = UDim2.new(0.85, -200, 0.5, -175),
         BackgroundTransparency = 1,
         Parent = HomePage,
+        Visible = not IS_MOBILE, -- Hide on mobile
         Ambient = Color3.new(0.8, 0.8, 0.8),
         LightColor = Color3.new(1, 1, 1),
         LightDirection = Vector3.new(1, 1, 1),
@@ -486,36 +511,36 @@ function Library.new(opts)
     end)
     end)
     
-    -- Welcome Text
+    -- Welcome Text (smaller on mobile)
     local WelcomeTitle = Utility:Create("TextLabel", {
         Text = "Welcome back,\n" .. Player.DisplayName,
-        Size = UDim2.new(0, 300, 0, 80),
-        Position = UDim2.new(0, 40, 0, 60),
+        Size = IS_MOBILE and UDim2.new(0, 200, 0, 60) or UDim2.new(0, 300, 0, 80),
+        Position = IS_MOBILE and UDim2.new(0, 15, 0, 20) or UDim2.new(0, 40, 0, 60),
         BackgroundTransparency = 1,
         TextColor3 = Theme.Text,
         Font = Enum.Font.GothamBold,
-        TextSize = 32,
+        TextSize = IS_MOBILE and 20 or 32,
         TextXAlignment = Enum.TextXAlignment.Left,
         RichText = true,
         Parent = HomePage
     })
     
     local WelcomeSub = Utility:Create("TextLabel", {
-        Text = "OT UI Library v1.0 • Built by Ahmed",
-        Size = UDim2.new(0, 300, 0, 20),
-        Position = UDim2.new(0, 40, 0, 130),
+        Text = "OT UI Library v1.1 • Built by Ahmed",
+        Size = IS_MOBILE and UDim2.new(0, 200, 0, 16) or UDim2.new(0, 300, 0, 20),
+        Position = IS_MOBILE and UDim2.new(0, 15, 0, 75) or UDim2.new(0, 40, 0, 130),
         BackgroundTransparency = 1,
         TextColor3 = Theme.Accent,
         Font = Enum.Font.GothamMedium,
-        TextSize = 14,
+        TextSize = IS_MOBILE and 11 or 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = HomePage
     })
     
-    -- Stats Cards
+    -- Stats Cards (adjusted for mobile)
     local StatsContainer = Utility:Create("Frame", {
-        Size = UDim2.new(0, 300, 0, 150),
-        Position = UDim2.new(0, 40, 0, 180),
+        Size = IS_MOBILE and UDim2.new(1, -30, 0, 150) or UDim2.new(0, 300, 0, 150),
+        Position = IS_MOBILE and UDim2.new(0, 15, 0, 100) or UDim2.new(0, 40, 0, 180),
         BackgroundTransparency = 1,
         Parent = HomePage
     })
@@ -911,10 +936,10 @@ function Library.new(opts)
         return clearAutoLoadConfig()
     end
     
-    -- Add Home Button to Sidebar
+    -- Add Home Button to Sidebar (responsive for mobile)
     local HomeBtn = Utility:Create("TextButton", {
         Name = "Home",
-        Size = UDim2.new(1, 0, 0, 36),
+        Size = UDim2.new(1, 0, 0, IS_MOBILE and 32 or 36),
         BackgroundColor3 = Theme.Sidebar,
         BackgroundTransparency = 1,
         Text = "",
@@ -922,10 +947,10 @@ function Library.new(opts)
         LayoutOrder = 0,
         ClipsDescendants = true
     })
-    Utility:Corner(HomeBtn, 6)
+    Utility:Corner(HomeBtn, IS_MOBILE and 4 or 6)
     
     local HomeIndicator = Utility:Create("Frame", {
-        Size = UDim2.new(0, 3, 0, 18),
+        Size = UDim2.new(0, 3, 0, IS_MOBILE and 14 or 18),
         Position = UDim2.new(0, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundColor3 = Theme.Accent,
@@ -935,22 +960,22 @@ function Library.new(opts)
     Utility:Corner(HomeIndicator, 2)
     
     local HomeIcon = Utility:Create("ImageLabel", {
-        Size = UDim2.new(0, 18, 0, 18),
-        Position = UDim2.new(0, 12, 0.5, -9),
+        Size = IS_MOBILE and UDim2.new(0, 14, 0, 14) or UDim2.new(0, 18, 0, 18),
+        Position = IS_MOBILE and UDim2.new(0, 8, 0.5, -7) or UDim2.new(0, 12, 0.5, -9),
         BackgroundTransparency = 1,
-        Image = "rbxassetid://0", -- Home icon
+        Image = "rbxassetid://3926305904", -- Home icon
         ImageColor3 = Theme.Accent,
         Parent = HomeBtn
     })
     
     local HomeTitle = Utility:Create("TextLabel", {
         Text = "Dashboard",
-        Size = UDim2.new(1, -44, 1, 0),
-        Position = UDim2.new(0, 44, 0, 0),
+        Size = IS_MOBILE and UDim2.new(1, -30, 1, 0) or UDim2.new(1, -44, 1, 0),
+        Position = IS_MOBILE and UDim2.new(0, 28, 0, 0) or UDim2.new(0, 44, 0, 0),
         BackgroundTransparency = 1,
         TextColor3 = Theme.Accent,
         Font = Enum.Font.GothamMedium,
-        TextSize = 13,
+        TextSize = IS_MOBILE and 11 or 13,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = HomeBtn
     })
@@ -998,10 +1023,10 @@ function Library.new(opts)
     function Window:AddTab(name, icon)
         local Tab = {}
         
-        -- Tab Button
+        -- Tab Button (smaller on mobile)
         local Btn = Utility:Create("TextButton", {
             Name = name,
-            Size = UDim2.new(1, 0, 0, 36),
+            Size = UDim2.new(1, 0, 0, IS_MOBILE and 32 or 36),
             BackgroundColor3 = Theme.Sidebar,
             BackgroundTransparency = 1,
             AutoButtonColor = false,
@@ -1010,7 +1035,7 @@ function Library.new(opts)
             LayoutOrder = #Window.Tabs + 1,
             ClipsDescendants = true
         })
-        Utility:Corner(Btn, 6)
+        Utility:Corner(Btn, IS_MOBILE and 4 or 6)
         
         local Indicator = Utility:Create("Frame", {
             Size = UDim2.new(0, 3, 0, 0),
@@ -1025,8 +1050,8 @@ function Library.new(opts)
         local IconLbl = nil
         if icon then
             IconLbl = Utility:Create("ImageLabel", {
-                Size = UDim2.new(0, 18, 0, 18),
-                Position = UDim2.new(0, 12, 0.5, -9),
+                Size = IS_MOBILE and UDim2.new(0, 14, 0, 14) or UDim2.new(0, 18, 0, 18),
+                Position = IS_MOBILE and UDim2.new(0, 8, 0.5, -7) or UDim2.new(0, 12, 0.5, -9),
                 BackgroundTransparency = 1,
                 Image = icon,
                 ImageColor3 = Theme.SubText,
@@ -1036,13 +1061,14 @@ function Library.new(opts)
         
         local Title = Utility:Create("TextLabel", {
             Text = name,
-            Size = UDim2.new(1, -44, 1, 0),
-            Position = UDim2.new(0, 44, 0, 0),
+            Size = IS_MOBILE and UDim2.new(1, -30, 1, 0) or UDim2.new(1, -44, 1, 0),
+            Position = IS_MOBILE and UDim2.new(0, 28, 0, 0) or UDim2.new(0, 44, 0, 0),
             BackgroundTransparency = 1,
             TextColor3 = Theme.SubText,
             Font = Enum.Font.GothamMedium,
-            TextSize = 13,
+            TextSize = IS_MOBILE and 11 or 13,
             TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
             Parent = Btn
         })
         
@@ -1107,7 +1133,7 @@ function Library.new(opts)
         local TabObj = {Btn = Btn, Page = Page, Indicator = Indicator, Title = Title, Icon = IconLbl}
         Window.Tabs[name] = TabObj
         
-        -- Two-column layout: sections flow independently (no height matching)
+        -- Layout: Two-column on desktop, single-column on mobile
         local ColumnsContainer = Utility:Create("Frame", {
             Name = "ColumnsContainer",
             Size = UDim2.new(1, 0, 0, 0),
@@ -1116,32 +1142,33 @@ function Library.new(opts)
             Parent = Page
         })
         
-        -- Left column
+        -- Left column (full width on mobile)
         local LeftColumn = Utility:Create("Frame", {
             Name = "LeftColumn",
-            Size = UDim2.new(0.5, -6, 0, 0),
+            Size = IS_MOBILE and UDim2.new(1, 0, 0, 0) or UDim2.new(0.5, -6, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
             Position = UDim2.new(0, 0, 0, 0),
             BackgroundTransparency = 1,
             Parent = ColumnsContainer
         })
         Utility:Create("UIListLayout", {
-            Padding = UDim.new(0, 12),
+            Padding = UDim.new(0, IS_MOBILE and 8 or 12),
             SortOrder = Enum.SortOrder.LayoutOrder,
             Parent = LeftColumn
         })
         
-        -- Right column
+        -- Right column (hidden on mobile, sections go to left column instead)
         local RightColumn = Utility:Create("Frame", {
             Name = "RightColumn",
-            Size = UDim2.new(0.5, -6, 0, 0),
+            Size = IS_MOBILE and UDim2.new(1, 0, 0, 0) or UDim2.new(0.5, -6, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
-            Position = UDim2.new(0.5, 6, 0, 0),
+            Position = IS_MOBILE and UDim2.new(0, 0, 0, 0) or UDim2.new(0.5, 6, 0, 0),
             BackgroundTransparency = 1,
+            Visible = not IS_MOBILE, -- Hidden on mobile
             Parent = ColumnsContainer
         })
         Utility:Create("UIListLayout", {
-            Padding = UDim.new(0, 12),
+            Padding = UDim.new(0, IS_MOBILE and 8 or 12),
             SortOrder = Enum.SortOrder.LayoutOrder,
             Parent = RightColumn
         })
@@ -1153,7 +1180,7 @@ function Library.new(opts)
         local function updateContainerHeight()
             task.defer(function()
                 local leftHeight = LeftColumn.AbsoluteSize.Y
-                local rightHeight = RightColumn.AbsoluteSize.Y
+                local rightHeight = IS_MOBILE and 0 or RightColumn.AbsoluteSize.Y
                 ColumnsContainer.Size = UDim2.new(1, 0, 0, math.max(leftHeight, rightHeight))
             end)
         end
@@ -1162,9 +1189,10 @@ function Library.new(opts)
         function Tab:AddSection(title)
             local Section = {}
             
-            -- Alternate between left and right columns
+            -- On mobile: all sections go to left column (single column layout)
+            -- On desktop: alternate between left and right columns
             sectionCount = sectionCount + 1
-            local targetColumn = (sectionCount % 2 == 1) and LeftColumn or RightColumn
+            local targetColumn = IS_MOBILE and LeftColumn or ((sectionCount % 2 == 1) and LeftColumn or RightColumn)
             
             -- Section box (full width of column)
             local Container = Utility:Create("Frame", {
@@ -2630,7 +2658,7 @@ end
     end
     
     function Window:SettingsTab()
-        local S = Window:AddTab("Settings", "rbxassetid://0")
+        local S = Window:AddTab("Settings", "rbxassetid://10002398990")
         
         -- Configurations Section
         local ConfigSec = S:AddSection("Configurations")
