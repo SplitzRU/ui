@@ -938,7 +938,7 @@ function Library.new(opts)
         Size = UDim2.new(0, 18, 0, 18),
         Position = UDim2.new(0, 12, 0.5, -9),
         BackgroundTransparency = 1,
-        Image = "rbxassetid://3926305904", -- Home icon
+        Image = "rbxassetid://0", -- Home icon
         ImageColor3 = Theme.Accent,
         Parent = HomeBtn
     })
@@ -2630,7 +2630,7 @@ end
     end
     
     function Window:SettingsTab()
-        local S = Window:AddTab("Settings", "rbxassetid://10002398990")
+        local S = Window:AddTab("Settings", "rbxassetid://0")
         
         -- Configurations Section
         local ConfigSec = S:AddSection("Configurations")
