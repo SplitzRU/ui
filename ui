@@ -247,7 +247,7 @@ function Library.new(opts)
     Window.Elements = {} -- For search
     Window._configValues = {} -- Stores current config values
     Window._configCallbacks = {} -- Callbacks to update UI when config loads
-    Window._toggleKey = Enum.KeyCode.RightControl
+    Window._toggleKey = Enum.KeyCode.LeftControl
     
     -- Protect GUI
     local ScreenGui = Utility:Create("ScreenGui", {
