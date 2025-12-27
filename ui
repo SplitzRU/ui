@@ -247,7 +247,7 @@ function Library.new(opts)
     Window.Elements = {} -- For search
     Window._configValues = {} -- Stores current config values
     Window._configCallbacks = {} -- Callbacks to update UI when config loads
-    Window._toggleKey = Enum.KeyCode.RightControl
+    Window._toggleKey = Enum.KeyCode.LeftControl
     
     -- Protect GUI
     local ScreenGui = Utility:Create("ScreenGui", {
@@ -971,7 +971,7 @@ function Library.new(opts)
         Size = IS_MOBILE and UDim2.new(0, 14, 0, 14) or UDim2.new(0, 18, 0, 18),
         Position = IS_MOBILE and UDim2.new(0, 8, 0.5, -7) or UDim2.new(0, 12, 0.5, -9),
         BackgroundTransparency = 1,
-        Image = "rbxassetid://3926305904", -- Home icon
+        Image = "rbxassetid://0", -- Home icon
         ImageColor3 = Theme.Accent,
         Parent = HomeBtn
     })
@@ -2689,7 +2689,7 @@ end
     end
     
     function Window:SettingsTab()
-        local S = Window:AddTab("Settings", "rbxassetid://10002398990")
+        local S = Window:AddTab("Settings", "rbxassetid://0")
         
         -- Configurations Section
         local ConfigSec = S:AddSection("Configurations")
