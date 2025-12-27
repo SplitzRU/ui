@@ -277,59 +277,41 @@ function Utility:CreateActivationControls(parentFrame, opts)
     local toggleActive = false
     local uniqueId = HttpService:GenerateGUID(false)
     
-    -- Container for activation controls (appears below the main widget)
+    -- Container for activation controls (appears below the main widget with spacing)
     local ActivationContainer = Utility:Create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
-        Position = UDim2.new(0, 0, 1, 0),
-        BackgroundColor3 = Theme.Element,
-        BackgroundTransparency = 0.5,
+        Position = UDim2.new(0, 0, 1, 6), -- 6px gap from widget
+        BackgroundColor3 = Theme.Section,
+        BackgroundTransparency = 0,
         Visible = false,
         ClipsDescendants = true,
         Parent = parentFrame,
         ZIndex = 5
     })
-    Utility:Corner(ActivationContainer, 4)
+    Utility:Corner(ActivationContainer, 6)
+    Utility:Stroke(ActivationContainer, Theme.Outline, 1)
     
-    local ActivationPadding = Utility:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 8),
-        PaddingRight = UDim.new(0, 8),
-        PaddingTop = UDim.new(0, 4),
-        PaddingBottom = UDim.new(0, 4),
-        Parent = ActivationContainer
-    })
-    
-    -- Mode buttons row
+    -- Mode buttons row (no separate label, compact layout)
     local ModeRow = Utility:Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 24),
+        Size = UDim2.new(1, -16, 0, 26),
+        Position = UDim2.new(0, 8, 0, 8),
         BackgroundTransparency = 1,
         Parent = ActivationContainer
     })
     
-    local ModeLabel = Utility:Create("TextLabel", {
-        Text = "Mode:",
-        Size = UDim2.new(0, 40, 1, 0),
-        BackgroundTransparency = 1,
-        TextColor3 = Theme.SubText,
-        Font = Enum.Font.Gotham,
-        TextSize = 11,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = ModeRow
-    })
-    
-    -- Mode selector buttons
+    -- Mode selector buttons (side by side, filling the row)
     local modeButtons = {}
     local modeNames = {"Always", "Hold", "Toggle"}
-    local modeWidth = 50
     
     for i, modeName in ipairs(modeNames) do
         local ModeBtn = Utility:Create("TextButton", {
-            Size = UDim2.new(0, modeWidth, 0, 20),
-            Position = UDim2.new(0, 40 + (i-1) * (modeWidth + 4), 0.5, -10),
+            Size = UDim2.new(0.333, -4, 1, 0),
+            Position = UDim2.new((i-1) * 0.333, (i-1) * 2, 0, 0),
             BackgroundColor3 = i == 1 and Theme.Accent or Theme.Element,
             Text = modeName,
             TextColor3 = i == 1 and Theme.Background or Theme.SubText,
             Font = Enum.Font.GothamMedium,
-            TextSize = 10,
+            TextSize = 11,
             AutoButtonColor = false,
             Parent = ModeRow,
             ClipsDescendants = true
@@ -338,10 +320,10 @@ function Utility:CreateActivationControls(parentFrame, opts)
         modeButtons[i] = ModeBtn
     end
     
-    -- Key binding row
+    -- Key binding row (only visible for Hold/Toggle modes)
     local KeyRow = Utility:Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 24),
-        Position = UDim2.new(0, 0, 0, 28),
+        Size = UDim2.new(1, -16, 0, 28),
+        Position = UDim2.new(0, 8, 0, 40),
         BackgroundTransparency = 1,
         Visible = false,
         Parent = ActivationContainer
@@ -349,7 +331,7 @@ function Utility:CreateActivationControls(parentFrame, opts)
     
     local KeyLabel = Utility:Create("TextLabel", {
         Text = "Key:",
-        Size = UDim2.new(0, 40, 1, 0),
+        Size = UDim2.new(0, 35, 1, 0),
         BackgroundTransparency = 1,
         TextColor3 = Theme.SubText,
         Font = Enum.Font.Gotham,
@@ -359,12 +341,12 @@ function Utility:CreateActivationControls(parentFrame, opts)
     })
     
     local KeyBtn = Utility:Create("TextButton", {
-        Size = UDim2.new(0, 80, 0, 20),
-        Position = UDim2.new(0, 40, 0.5, -10),
+        Size = UDim2.new(0, 90, 0, 24),
+        Position = UDim2.new(0, 35, 0.5, -12),
         BackgroundColor3 = Theme.Element,
         Text = "None",
         TextColor3 = Theme.Text,
-        Font = Enum.Font.Gotham,
+        Font = Enum.Font.GothamMedium,
         TextSize = 11,
         AutoButtonColor = false,
         Parent = KeyRow,
@@ -373,24 +355,24 @@ function Utility:CreateActivationControls(parentFrame, opts)
     Utility:Corner(KeyBtn, 4)
     Utility:Stroke(KeyBtn, Theme.Outline, 1)
     
-    -- Status indicator (on the main activation button)
+    -- Status indicator next to key button
     local StatusDot = Utility:Create("Frame", {
-        Size = UDim2.new(0, 6, 0, 6),
-        Position = UDim2.new(0, 130, 0.5, -3),
-        BackgroundColor3 = Theme.Success,
+        Size = UDim2.new(0, 8, 0, 8),
+        Position = UDim2.new(0, 135, 0.5, -4),
+        BackgroundColor3 = Theme.Danger,
         Visible = false,
         Parent = KeyRow
     })
-    Utility:Corner(StatusDot, 3)
+    Utility:Corner(StatusDot, 4)
     
     local StatusLabel = Utility:Create("TextLabel", {
-        Text = "ACTIVE",
-        Size = UDim2.new(0, 50, 1, 0),
-        Position = UDim2.new(0, 140, 0, 0),
+        Text = "INACTIVE",
+        Size = UDim2.new(0, 60, 1, 0),
+        Position = UDim2.new(0, 148, 0, 0),
         BackgroundTransparency = 1,
-        TextColor3 = Theme.Success,
+        TextColor3 = Theme.Danger,
         Font = Enum.Font.GothamBold,
-        TextSize = 9,
+        TextSize = 10,
         TextXAlignment = Enum.TextXAlignment.Left,
         Visible = false,
         Parent = KeyRow
@@ -436,15 +418,15 @@ function Utility:CreateActivationControls(parentFrame, opts)
             end
         end
         
-        -- Show/hide key row based on mode
+        -- Show/hide key row based on mode (Always = no key needed)
         local needsKey = activationMode ~= ACTIVATION_MODES.ALWAYS
         KeyRow.Visible = needsKey
         
-        -- Update container size
-        local containerHeight = needsKey and 56 or 28
+        -- Update container size: 42px for mode row only, 78px with key row
+        local containerHeight = needsKey and 78 or 42
         if expanded then
             Utility:Tween(ActivationContainer, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, containerHeight)})
-            parentFrame.Size = UDim2.new(1, 0, 0, widgetHeight + containerHeight + 4)
+            Utility:Tween(parentFrame, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, widgetHeight + containerHeight + 10)})
         end
     end
     
@@ -487,9 +469,10 @@ function Utility:CreateActivationControls(parentFrame, opts)
         
         if expanded then
             ActivationContainer.Visible = true
-            local containerHeight = activationMode ~= ACTIVATION_MODES.ALWAYS and 56 or 28
+            -- 42px for mode row only, 78px with key row
+            local containerHeight = activationMode ~= ACTIVATION_MODES.ALWAYS and 78 or 42
             Utility:Tween(ActivationContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, containerHeight)})
-            Utility:Tween(parentFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, widgetHeight + containerHeight + 4)})
+            Utility:Tween(parentFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, widgetHeight + containerHeight + 10)})
             Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {BackgroundTransparency = 0, TextColor3 = Theme.Accent})
         else
             Utility:Tween(ActivationContainer, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
@@ -3796,5 +3779,4 @@ function Library.new(opts)
     
     return Window
 end
-
 return Library 
