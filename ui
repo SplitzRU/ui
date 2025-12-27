@@ -247,7 +247,7 @@ function Library.new(opts)
     Window.Elements = {} -- For search
     Window._configValues = {} -- Stores current config values
     Window._configCallbacks = {} -- Callbacks to update UI when config loads
-    Window._toggleKey = Enum.KeyCode.LeftControl
+    Window._toggleKey = Enum.KeyCode.RightControl
     
     -- Protect GUI
     local ScreenGui = Utility:Create("ScreenGui", {
@@ -971,7 +971,7 @@ function Library.new(opts)
         Size = IS_MOBILE and UDim2.new(0, 14, 0, 14) or UDim2.new(0, 18, 0, 18),
         Position = IS_MOBILE and UDim2.new(0, 8, 0.5, -7) or UDim2.new(0, 12, 0.5, -9),
         BackgroundTransparency = 1,
-        Image = "rbxassetid://0", -- Home icon
+        Image = "rbxassetid://3926305904", -- Home icon
         ImageColor3 = Theme.Accent,
         Parent = HomeBtn
     })
@@ -1305,7 +1305,10 @@ function Library.new(opts)
                 
                 -- Register for search
                 table.insert(Window.Elements, {Type = "Button", Name = bName, Obj = BtnFrame, Section = title, Tab = name, Container = Container})
-                return BtnFrame
+                return {
+                    Frame = BtnFrame,
+                    SetVisible = function(_, visible) BtnFrame.Visible = visible end
+                }
             end
             
             function Section:AddToggle(opts)
@@ -1384,9 +1387,9 @@ function Library.new(opts)
                     end
                 end)
                 
-                -- Register config callback
+                -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
-                    setState(val, true)
+                    setState(val, false) -- false = DO trigger callback so feature activates
                 end
                 Window._configValues[configKey] = state
                 Update()
@@ -1394,7 +1397,8 @@ function Library.new(opts)
                 table.insert(Window.Elements, {Type = "Toggle", Name = tName, Obj = Frame, Section = title, Tab = name, Container = Container})
     return {
                     Set = function(_, s) setState(s) end,
-        Get = function() return state end
+                    Get = function() return state end,
+                    SetVisible = function(_, visible) Frame.Visible = visible end
     }
 end
 
@@ -1564,16 +1568,18 @@ end
                 local startPercent = (def - min) / (max - min)
                 Fill.Size = UDim2.new(startPercent, 0, 1, 0)
                 
-                -- Register config callback
+                -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
-                    setValue(val, true)
+                    setValue(val, false) -- false = DO trigger callback so feature activates
                 end
                 Window._configValues[configKey] = currentValue
                 
                 table.insert(Window.Elements, {Type = "Slider", Name = sName, Obj = Frame, Section = title, Tab = name, Container = Container})
     return {
+                    Frame = Frame,
         Set = function(_, val) setValue(val) end,
-                    Get = function() return currentValue end
+                    Get = function() return currentValue end,
+                    SetVisible = function(_, visible) Frame.Visible = visible end
                 }
             end
             
@@ -1718,10 +1724,12 @@ end
                     end
                 end)
                 
-                -- Register config callback
+                -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     current = val
                     Label.Text = dName .. ": " .. val
+                    Window._configValues[configKey] = current
+                    callback(val) -- Trigger callback so feature activates
                 end
                 if current then
                     Window._configValues[configKey] = current
@@ -1763,12 +1771,14 @@ end
                 end
     
     return {
+                    Frame = Frame,
                     Set = function(_, val)
                         current = val
                         Label.Text = dName .. ": " .. val
                         Window._configValues[configKey] = current
                     end,
                     Get = function() return current end,
+                    SetVisible = function(_, visible) Frame.Visible = visible end,
                     Refresh = function(newOptions)
                         -- Clear existing options
                         for _, child in pairs(List:GetChildren()) do
@@ -1984,7 +1994,7 @@ end
                     end
                 end)
                 
-                -- Register config callback
+                -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     if type(val) == "table" then
                         selected = {}
@@ -1992,10 +2002,12 @@ end
                             selected[v] = true
                         end
                         Label.Text = dName .. ": " .. getSelectedText()
+                        Window._configValues[configKey] = getSelectedArray()
                         -- Update visual state
                         for opt, refs in pairs(itemRefs) do
                             updateItem(opt, refs.Item, refs.Check)
                         end
+                        callback(getSelectedArray()) -- Trigger callback so feature activates
                     end
                 end
                 Window._configValues[configKey] = getSelectedArray()
@@ -2041,7 +2053,8 @@ end
                             updateItem(opt, refs.Item, refs.Check)
                         end
                         callback({})
-                    end
+                    end,
+                    SetVisible = function(_, visible) Frame.Visible = visible end
                 }
             end
             
@@ -2132,12 +2145,12 @@ end
                     end
                 end)
                 
-                -- Register config callback
+                -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     if val then
-                        setKey(Enum.KeyCode[val], true)
+                        setKey(Enum.KeyCode[val], false) -- false = DO trigger callback
                     else
-                        setKey(nil, true)
+                        setKey(nil, false)
                     end
                 end
                 if key then
@@ -2146,8 +2159,10 @@ end
                 
                 table.insert(Window.Elements, {Type = "Keybind", Name = kName, Obj = Frame, Section = title, Tab = name, Container = Container})
                 return {
+                    Frame = Frame,
                     Set = function(_, k) setKey(k) end,
-                    Get = function() return key end
+                    Get = function() return key end,
+                    SetVisible = function(_, visible) Frame.Visible = visible end
                 }
             end
             
@@ -2202,16 +2217,20 @@ end
                     callback(Input.Text)
                 end)
                 
-                -- Register config callback
+                -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     Input.Text = val or ""
+                    Window._configValues[configKey] = val or ""
+                    callback(val or "") -- Trigger callback so feature activates
                 end
                 Window._configValues[configKey] = Input.Text
                 
                 table.insert(Window.Elements, {Type = "Textbox", Name = tName, Obj = Frame, Section = title, Tab = name, Container = Container})
                 return {
+                    Frame = Frame,
                     Set = function(_, text) Input.Text = text; Window._configValues[configKey] = text end,
-                    Get = function() return Input.Text end
+                    Get = function() return Input.Text end,
+                    SetVisible = function(_, visible) Frame.Visible = visible end
                 }
             end
             
@@ -2229,7 +2248,8 @@ end
                 
                 return {
                     Label = Label,
-                    Set = function(_, newText) Label.Text = newText end
+                    Set = function(_, newText) Label.Text = newText end,
+                    SetVisible = function(_, visible) Label.Visible = visible end
                 }
             end
             
@@ -2529,7 +2549,7 @@ end
                     end
                 end)
                 
-                -- Config callbacks
+                -- Config callbacks (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     if val and val.R then
                         rValue = val.R
@@ -2550,6 +2570,8 @@ end
                         ColorBtn.BackgroundTransparency = 1 - currentAlpha
                         PreviewBox.BackgroundColor3 = currentColor
                         PreviewBox.BackgroundTransparency = 1 - currentAlpha
+                        Window._configValues[configKey] = {R = rValue, G = gValue, B = bValue, A = alphaValue}
+                        callback(currentColor, currentAlpha) -- Trigger callback so feature activates
                     end
                 end
                 Window._configValues[configKey] = {R = rValue, G = gValue, B = bValue, A = alphaValue}
@@ -2570,7 +2592,8 @@ end
                         AlphaValueLbl.Text = tostring(math.floor(alpha * 100)) .. "%"
                         updatePreview()
                     end,
-                    Get = function() return currentColor, currentAlpha end
+                    Get = function() return currentColor, currentAlpha end,
+                    SetVisible = function(_, visible) Frame.Visible = visible end
                 }
             end
             
@@ -2666,7 +2689,7 @@ end
     end
     
     function Window:SettingsTab()
-        local S = Window:AddTab("Settings", "rbxassetid://0")
+        local S = Window:AddTab("Settings", "rbxassetid://10002398990")
         
         -- Configurations Section
         local ConfigSec = S:AddSection("Configurations")
