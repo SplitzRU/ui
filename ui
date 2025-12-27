@@ -280,9 +280,8 @@ function Utility:CreateActivationControls(parentFrame, opts)
     -- Container for activation controls (appears below the main widget with spacing)
     local ActivationContainer = Utility:Create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
-        -- IMPORTANT: anchor directly under the *base* widget area (dropdown-style)
-        -- Using ScaleY=1 would push the panel to the bottom when the widget expands.
-        Position = UDim2.new(0, 0, 0, widgetHeight + 6), -- 6px gap from widget
+        -- Force offset positioning to stick to component bottom
+        Position = UDim2.new(0, 0, 0, widgetHeight + 4),
         BackgroundColor3 = Theme.Section,
         BackgroundTransparency = 0,
         Visible = false,
@@ -427,9 +426,10 @@ function Utility:CreateActivationControls(parentFrame, opts)
         -- Update container size: 42px for mode row only, 78px with key row
         local containerHeight = needsKey and 78 or 42
         if expanded then
+            ActivationContainer.Position = UDim2.new(0, 0, 0, widgetHeight + 4) -- FORCE CORRECT POSITION
             Utility:Tween(ActivationContainer, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, containerHeight)})
-            -- +6 gap above panel +4 breathing room below
-            Utility:Tween(parentFrame, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, widgetHeight + 6 + containerHeight + 4)})
+            -- +4 gap above panel +4 breathing room below
+            Utility:Tween(parentFrame, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, widgetHeight + 4 + containerHeight + 4)})
         end
     end
     
@@ -472,11 +472,12 @@ function Utility:CreateActivationControls(parentFrame, opts)
         
         if expanded then
             ActivationContainer.Visible = true
+            ActivationContainer.Position = UDim2.new(0, 0, 0, widgetHeight + 4) -- FORCE CORRECT POSITION
             -- 42px for mode row only, 78px with key row
             local containerHeight = activationMode ~= ACTIVATION_MODES.ALWAYS and 78 or 42
             Utility:Tween(ActivationContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, containerHeight)})
-            -- +6 gap above panel +4 breathing room below
-            Utility:Tween(parentFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, widgetHeight + 6 + containerHeight + 4)})
+            -- +4 gap above panel +4 breathing room below
+            Utility:Tween(parentFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, widgetHeight + 4 + containerHeight + 4)})
             Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {BackgroundTransparency = 0, TextColor3 = Theme.Accent})
         else
             Utility:Tween(ActivationContainer, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
@@ -3783,5 +3784,4 @@ function Library.new(opts)
     
     return Window
 end
-
-return Library 
+return Library
