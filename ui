@@ -380,21 +380,18 @@ function Utility:CreateActivationControls(parentFrame, opts)
     })
     
     -- Activation toggle button (small gear icon on the right side of widget)
-    local ActivationBtn = Utility:Create("TextButton", {
+    local ActivationBtn = Utility:Create("ImageButton", {
         Size = UDim2.new(0, 20, 0, 20),
         Position = UDim2.new(1, -24, 0, 6),
         AnchorPoint = Vector2.new(0, 0),
-        BackgroundColor3 = Theme.Element,
-        BackgroundTransparency = 0.5,
-        Text = "⚙",
-        TextColor3 = Theme.SubText,
-        Font = Enum.Font.Gotham,
-        TextSize = 12,
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://12369278424",
+        ImageColor3 = Theme.SubText,
         AutoButtonColor = false,
         Parent = parentFrame,
         ZIndex = 10
     })
-    Utility:Corner(ActivationBtn, 4)
+    -- No background, so no corner needed
     
     -- Mini status dot on activation button
     local MiniStatus = Utility:Create("Frame", {
@@ -478,11 +475,11 @@ function Utility:CreateActivationControls(parentFrame, opts)
             Utility:Tween(ActivationContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, containerHeight)})
             -- +4 gap above panel +4 breathing room below
             Utility:Tween(parentFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, widgetHeight + 4 + containerHeight + 4)})
-            Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {BackgroundTransparency = 0, TextColor3 = Theme.Accent})
+            Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {ImageColor3 = Theme.Accent})
         else
             Utility:Tween(ActivationContainer, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
             Utility:Tween(parentFrame, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, widgetHeight)})
-            Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {BackgroundTransparency = 0.5, TextColor3 = Theme.SubText})
+            Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {ImageColor3 = Theme.SubText})
             task.delay(0.15, function()
                 if not expanded then
                     ActivationContainer.Visible = false
