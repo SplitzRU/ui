@@ -233,6 +233,399 @@ function Utility:ParticleEffect(parent, color)
     end)
 end
 
+--// Activation System
+-- Global key state tracking
+local ActiveKeys = {} -- Tracks currently held keys
+local ToggleStates = {} -- Tracks toggle activation states
+
+-- Track key states globally
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        ActiveKeys[input.KeyCode] = true
+    elseif input.UserInputType == Enum.UserInputType.Gamepad1 then
+        ActiveKeys[input.KeyCode] = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        ActiveKeys[input.KeyCode] = nil
+    elseif input.UserInputType == Enum.UserInputType.Gamepad1 then
+        ActiveKeys[input.KeyCode] = nil
+    end
+end)
+
+-- Activation modes
+local ACTIVATION_MODES = {
+    ALWAYS = 1,  -- Always active (no key required)
+    HOLD = 2,    -- Active only while key is held
+    TOGGLE = 3   -- Press to toggle on/off
+}
+
+-- Creates activation controls for a feature
+-- Returns: { isActive = function, getMode = function, getKey = function, controls = Frame }
+function Utility:CreateActivationControls(parentFrame, opts)
+    opts = opts or {}
+    local configPrefix = opts.ConfigPrefix or "activation"
+    local Window = opts.Window
+    local onActivationChange = opts.OnActivationChange or function() end
+    local widgetHeight = opts.WidgetHeight or 32 -- Original height of the widget
+    
+    local activationMode = ACTIVATION_MODES.ALWAYS
+    local activationKey = nil
+    local toggleActive = false
+    local uniqueId = HttpService:GenerateGUID(false)
+    
+    -- Container for activation controls (appears below the main widget)
+    local ActivationContainer = Utility:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = Theme.Element,
+        BackgroundTransparency = 0.5,
+        Visible = false,
+        ClipsDescendants = true,
+        Parent = parentFrame,
+        ZIndex = 5
+    })
+    Utility:Corner(ActivationContainer, 4)
+    
+    local ActivationPadding = Utility:Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 8),
+        PaddingRight = UDim.new(0, 8),
+        PaddingTop = UDim.new(0, 4),
+        PaddingBottom = UDim.new(0, 4),
+        Parent = ActivationContainer
+    })
+    
+    -- Mode buttons row
+    local ModeRow = Utility:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 24),
+        BackgroundTransparency = 1,
+        Parent = ActivationContainer
+    })
+    
+    local ModeLabel = Utility:Create("TextLabel", {
+        Text = "Mode:",
+        Size = UDim2.new(0, 40, 1, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = Theme.SubText,
+        Font = Enum.Font.Gotham,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = ModeRow
+    })
+    
+    -- Mode selector buttons
+    local modeButtons = {}
+    local modeNames = {"Always", "Hold", "Toggle"}
+    local modeWidth = 50
+    
+    for i, modeName in ipairs(modeNames) do
+        local ModeBtn = Utility:Create("TextButton", {
+            Size = UDim2.new(0, modeWidth, 0, 20),
+            Position = UDim2.new(0, 40 + (i-1) * (modeWidth + 4), 0.5, -10),
+            BackgroundColor3 = i == 1 and Theme.Accent or Theme.Element,
+            Text = modeName,
+            TextColor3 = i == 1 and Theme.Background or Theme.SubText,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            AutoButtonColor = false,
+            Parent = ModeRow,
+            ClipsDescendants = true
+        })
+        Utility:Corner(ModeBtn, 4)
+        modeButtons[i] = ModeBtn
+    end
+    
+    -- Key binding row
+    local KeyRow = Utility:Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 24),
+        Position = UDim2.new(0, 0, 0, 28),
+        BackgroundTransparency = 1,
+        Visible = false,
+        Parent = ActivationContainer
+    })
+    
+    local KeyLabel = Utility:Create("TextLabel", {
+        Text = "Key:",
+        Size = UDim2.new(0, 40, 1, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = Theme.SubText,
+        Font = Enum.Font.Gotham,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = KeyRow
+    })
+    
+    local KeyBtn = Utility:Create("TextButton", {
+        Size = UDim2.new(0, 80, 0, 20),
+        Position = UDim2.new(0, 40, 0.5, -10),
+        BackgroundColor3 = Theme.Element,
+        Text = "None",
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.Gotham,
+        TextSize = 11,
+        AutoButtonColor = false,
+        Parent = KeyRow,
+        ClipsDescendants = true
+    })
+    Utility:Corner(KeyBtn, 4)
+    Utility:Stroke(KeyBtn, Theme.Outline, 1)
+    
+    -- Status indicator (on the main activation button)
+    local StatusDot = Utility:Create("Frame", {
+        Size = UDim2.new(0, 6, 0, 6),
+        Position = UDim2.new(0, 130, 0.5, -3),
+        BackgroundColor3 = Theme.Success,
+        Visible = false,
+        Parent = KeyRow
+    })
+    Utility:Corner(StatusDot, 3)
+    
+    local StatusLabel = Utility:Create("TextLabel", {
+        Text = "ACTIVE",
+        Size = UDim2.new(0, 50, 1, 0),
+        Position = UDim2.new(0, 140, 0, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = Theme.Success,
+        Font = Enum.Font.GothamBold,
+        TextSize = 9,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Visible = false,
+        Parent = KeyRow
+    })
+    
+    -- Activation toggle button (small gear icon on the right side of widget)
+    local ActivationBtn = Utility:Create("TextButton", {
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(1, -24, 0, 6),
+        AnchorPoint = Vector2.new(0, 0),
+        BackgroundColor3 = Theme.Element,
+        BackgroundTransparency = 0.5,
+        Text = "⚙",
+        TextColor3 = Theme.SubText,
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        AutoButtonColor = false,
+        Parent = parentFrame,
+        ZIndex = 10
+    })
+    Utility:Corner(ActivationBtn, 4)
+    
+    -- Mini status dot on activation button
+    local MiniStatus = Utility:Create("Frame", {
+        Size = UDim2.new(0, 6, 0, 6),
+        Position = UDim2.new(1, -2, 0, -2),
+        AnchorPoint = Vector2.new(1, 0),
+        BackgroundColor3 = Theme.Success,
+        Visible = false,
+        Parent = ActivationBtn,
+        ZIndex = 11
+    })
+    Utility:Corner(MiniStatus, 3)
+    
+    local expanded = false
+    
+    local function updateModeButtons()
+        for i, btn in ipairs(modeButtons) do
+            if i == activationMode then
+                Utility:Tween(btn, TweenInfo.new(0.15), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.Background})
+            else
+                Utility:Tween(btn, TweenInfo.new(0.15), {BackgroundColor3 = Theme.Element, TextColor3 = Theme.SubText})
+            end
+        end
+        
+        -- Show/hide key row based on mode
+        local needsKey = activationMode ~= ACTIVATION_MODES.ALWAYS
+        KeyRow.Visible = needsKey
+        
+        -- Update container size
+        local containerHeight = needsKey and 56 or 28
+        if expanded then
+            Utility:Tween(ActivationContainer, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, containerHeight)})
+            parentFrame.Size = UDim2.new(1, 0, 0, widgetHeight + containerHeight + 4)
+        end
+    end
+    
+    local function updateStatus()
+        local isActive = false
+        
+        if activationMode == ACTIVATION_MODES.ALWAYS then
+            isActive = true
+            StatusDot.Visible = false
+            StatusLabel.Visible = false
+            MiniStatus.Visible = false
+        elseif activationMode == ACTIVATION_MODES.HOLD then
+            isActive = activationKey and ActiveKeys[activationKey] or false
+            StatusDot.Visible = true
+            StatusLabel.Visible = true
+            MiniStatus.Visible = true
+            StatusDot.BackgroundColor3 = isActive and Theme.Success or Theme.Danger
+            StatusLabel.TextColor3 = isActive and Theme.Success or Theme.Danger
+            StatusLabel.Text = isActive and "ACTIVE" or "INACTIVE"
+            MiniStatus.BackgroundColor3 = isActive and Theme.Success or Theme.Danger
+        elseif activationMode == ACTIVATION_MODES.TOGGLE then
+            isActive = toggleActive
+            StatusDot.Visible = true
+            StatusLabel.Visible = true
+            MiniStatus.Visible = true
+            StatusDot.BackgroundColor3 = isActive and Theme.Success or Theme.Danger
+            StatusLabel.TextColor3 = isActive and Theme.Success or Theme.Danger
+            StatusLabel.Text = isActive and "ACTIVE" or "INACTIVE"
+            MiniStatus.BackgroundColor3 = isActive and Theme.Success or Theme.Danger
+        end
+        
+        onActivationChange(isActive)
+        return isActive
+    end
+    
+    -- Toggle panel expansion
+    ActivationBtn.MouseButton1Click:Connect(function()
+        Utility:Ripple(ActivationBtn, Theme.Accent)
+        expanded = not expanded
+        
+        if expanded then
+            ActivationContainer.Visible = true
+            local containerHeight = activationMode ~= ACTIVATION_MODES.ALWAYS and 56 or 28
+            Utility:Tween(ActivationContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, containerHeight)})
+            Utility:Tween(parentFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, widgetHeight + containerHeight + 4)})
+            Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {BackgroundTransparency = 0, TextColor3 = Theme.Accent})
+        else
+            Utility:Tween(ActivationContainer, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
+            Utility:Tween(parentFrame, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, widgetHeight)})
+            Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {BackgroundTransparency = 0.5, TextColor3 = Theme.SubText})
+            task.delay(0.15, function()
+                if not expanded then
+                    ActivationContainer.Visible = false
+                end
+            end)
+        end
+    end)
+    
+    -- Mode button clicks
+    for i, btn in ipairs(modeButtons) do
+        btn.MouseButton1Click:Connect(function()
+            Utility:Ripple(btn, Theme.Accent)
+            activationMode = i
+            toggleActive = false
+            updateModeButtons()
+            updateStatus()
+            
+            -- Save to config
+            if Window and Window._configValues then
+                Window._configValues[configPrefix .. "_mode"] = activationMode
+            end
+        end)
+    end
+    
+    -- Key binding
+    local bindingKey = false
+    
+    KeyBtn.MouseButton1Click:Connect(function()
+        Utility:Ripple(KeyBtn, Theme.Accent)
+        if bindingKey then return end
+        
+        bindingKey = true
+        KeyBtn.Text = "..."
+        Utility:Tween(KeyBtn, TweenInfo.new(0.1), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.Background})
+        
+        local conn
+        conn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if input.UserInputType == Enum.UserInputType.Keyboard or 
+               input.UserInputType == Enum.UserInputType.Gamepad1 then
+                activationKey = input.KeyCode
+                KeyBtn.Text = input.KeyCode.Name
+                Utility:Tween(KeyBtn, TweenInfo.new(0.1), {BackgroundColor3 = Theme.Element, TextColor3 = Theme.Text})
+                bindingKey = false
+                conn:Disconnect()
+                updateStatus()
+                
+                -- Save to config
+                if Window and Window._configValues then
+                    Window._configValues[configPrefix .. "_key"] = input.KeyCode.Name
+                end
+            end
+        end)
+    end)
+    
+    -- Handle toggle mode key presses
+    local toggleConnection
+    toggleConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if activationMode == ACTIVATION_MODES.TOGGLE and activationKey then
+            if input.KeyCode == activationKey then
+                toggleActive = not toggleActive
+                ToggleStates[uniqueId] = toggleActive
+                updateStatus()
+            end
+        end
+    end)
+    
+    -- Update status on render for hold mode
+    local statusConnection
+    statusConnection = RunService.RenderStepped:Connect(function()
+        if activationMode == ACTIVATION_MODES.HOLD then
+            updateStatus()
+        end
+    end)
+    
+    -- Cleanup when parent is destroyed
+    parentFrame.Destroying:Connect(function()
+        if toggleConnection then toggleConnection:Disconnect() end
+        if statusConnection then statusConnection:Disconnect() end
+    end)
+    
+    -- Config loading support
+    local function loadFromConfig(modeVal, keyVal)
+        if modeVal then
+            activationMode = modeVal
+            updateModeButtons()
+        end
+        if keyVal then
+            local success, keyCode = pcall(function()
+                return Enum.KeyCode[keyVal]
+            end)
+            if success and keyCode then
+                activationKey = keyCode
+                KeyBtn.Text = keyVal
+            end
+        end
+        updateStatus()
+    end
+    
+    return {
+        -- Check if feature should be active right now
+        isActive = function()
+            if activationMode == ACTIVATION_MODES.ALWAYS then
+                return true
+            elseif activationMode == ACTIVATION_MODES.HOLD then
+                return activationKey and ActiveKeys[activationKey] or false
+            elseif activationMode == ACTIVATION_MODES.TOGGLE then
+                return toggleActive
+            end
+            return true
+        end,
+        getMode = function() return activationMode end,
+        getKey = function() return activationKey end,
+        setMode = function(mode)
+            activationMode = mode
+            toggleActive = false
+            updateModeButtons()
+            updateStatus()
+        end,
+        setKey = function(keyCode)
+            activationKey = keyCode
+            KeyBtn.Text = keyCode and keyCode.Name or "None"
+            updateStatus()
+        end,
+        loadFromConfig = loadFromConfig,
+        controls = ActivationContainer,
+        button = ActivationBtn,
+        configPrefix = configPrefix
+    }
+end
+
 --// Main Library
 function Library.new(opts)
     -- Support both string and table input
@@ -1314,19 +1707,24 @@ function Library.new(opts)
             function Section:AddToggle(opts)
                 local tName = opts.Name or "Toggle"
                 local configKey = opts.ConfigKey or tName
-    local state = opts.Default or false
+                local state = opts.Default or false
                 local callback = opts.Callback or function() end
+                local enableActivation = opts.EnableActivation or false
+                
+                local baseHeight = 32
+                local activationControls = nil
                 
                 local Frame = Utility:Create("TextButton", {
-                    Size = UDim2.new(1, 0, 0, 32),
+                    Size = UDim2.new(1, 0, 0, baseHeight),
                     BackgroundTransparency = 1,
                     Text = "",
-                    Parent = ItemsDiv
+                    Parent = ItemsDiv,
+                    ClipsDescendants = false
                 })
                 
                 local Label = Utility:Create("TextLabel", {
                     Text = tName,
-                    Size = UDim2.new(1, -50, 1, 0),
+                    Size = UDim2.new(1, enableActivation and -75 or -50, 0, baseHeight),
                     BackgroundTransparency = 1,
                     TextColor3 = Theme.Text,
                     Font = Enum.Font.Gotham,
@@ -1337,7 +1735,7 @@ function Library.new(opts)
                 
                 local Switch = Utility:Create("Frame", {
                     Size = UDim2.new(0, 40, 0, 20),
-                    Position = UDim2.new(1, -40, 0.5, -10),
+                    Position = UDim2.new(1, enableActivation and -65 or -40, 0, 6),
                     BackgroundColor3 = Theme.Element,
                     Parent = Frame
                 })
@@ -1353,24 +1751,36 @@ function Library.new(opts)
                 Utility:Corner(Knob, 8)
                 
                 local function Update()
-        if state then
+                    if state then
                         Utility:Tween(Switch, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 70, 70)})
                         Utility:Tween(Knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, -8), BackgroundColor3 = Color3.new(1,1,1)})
-        else
+                    else
                         Utility:Tween(Switch, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element})
                         Utility:Tween(Knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -8), BackgroundColor3 = Theme.SubText})
-        end
-    end
-    
-    local function setState(val, skipCallback)
-        state = val
+                    end
+                end
+                
+                -- Wrapped callback that checks activation state
+                local function wrappedCallback(val)
+                    if activationControls then
+                        -- If activation controls exist, only call callback if activated
+                        if activationControls.isActive() then
+                            callback(val)
+                        end
+                    else
+                        callback(val)
+                    end
+                end
+                
+                local function setState(val, skipCallback)
+                    state = val
                     Update()
                     Window._configValues[configKey] = state
-                    if not skipCallback and callback then
-                        callback(state)
-        end
-    end
-    
+                    if not skipCallback then
+                        wrappedCallback(state)
+                    end
+                end
+                
                 Frame.MouseButton1Down:Connect(function()
                     Utility:Tween(Knob, TweenInfo.new(0.1), {Size = UDim2.new(0, 14, 0, 14)})
                 end)
@@ -1387,6 +1797,37 @@ function Library.new(opts)
                     end
                 end)
                 
+                -- Add activation controls if enabled
+                if enableActivation then
+                    activationControls = Utility:CreateActivationControls(Frame, {
+                        ConfigPrefix = configKey .. "_activation",
+                        Window = Window,
+                        WidgetHeight = baseHeight,
+                        OnActivationChange = function(isActive)
+                            -- Re-evaluate callback when activation state changes
+                            if state then
+                                if isActive then
+                                    callback(true)
+                                else
+                                    callback(false) -- Feature disabled when not active
+                                end
+                            end
+                        end
+                    })
+                    
+                    -- Register config callbacks for activation settings
+                    Window._configCallbacks[configKey .. "_activation_mode"] = function(val)
+                        if activationControls then
+                            activationControls.loadFromConfig(val, nil)
+                        end
+                    end
+                    Window._configCallbacks[configKey .. "_activation_key"] = function(val)
+                        if activationControls then
+                            activationControls.loadFromConfig(nil, val)
+                        end
+                    end
+                end
+                
                 -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     setState(val, false) -- false = DO trigger callback so feature activates
@@ -1395,21 +1836,27 @@ function Library.new(opts)
                 Update()
                 
                 table.insert(Window.Elements, {Type = "Toggle", Name = tName, Obj = Frame, Section = title, Tab = name, Container = Container})
-    return {
+                return {
                     Set = function(_, s) setState(s) end,
                     Get = function() return state end,
-                    SetVisible = function(_, visible) Frame.Visible = visible end
-    }
-end
+                    SetVisible = function(_, visible) Frame.Visible = visible end,
+                    IsActive = function() return activationControls and activationControls.isActive() or true end,
+                    GetActivation = function() return activationControls end
+                }
+            end
 
             function Section:AddSlider(opts)
                 local sName = opts.Name or "Slider"
                 local configKey = opts.ConfigKey or sName
-    local min = opts.Min or 0
-    local max = opts.Max or 100
+                local min = opts.Min or 0
+                local max = opts.Max or 100
                 local def = opts.Default or min
                 local increment = opts.Increment or 1
                 local callback = opts.Callback or function() end
+                local enableActivation = opts.EnableActivation or false
+                
+                local baseHeight = 46
+                local activationControls = nil
                 
                 -- Calculate decimal places from increment
                 local decimalPlaces = 0
@@ -1431,14 +1878,15 @@ end
                 end
                 
                 local Frame = Utility:Create("Frame", {
-                    Size = UDim2.new(1, 0, 0, 46),
+                    Size = UDim2.new(1, 0, 0, baseHeight),
                     BackgroundTransparency = 1,
-                    Parent = ItemsDiv
+                    Parent = ItemsDiv,
+                    ClipsDescendants = false
                 })
                 
                 local Label = Utility:Create("TextLabel", {
                     Text = sName,
-                    Size = UDim2.new(1, -55, 0, 20),
+                    Size = UDim2.new(1, enableActivation and -80 or -55, 0, 20),
                     BackgroundTransparency = 1,
                     TextColor3 = Theme.Text,
                     Font = Enum.Font.Gotham,
@@ -1568,6 +2016,35 @@ end
                 local startPercent = (def - min) / (max - min)
                 Fill.Size = UDim2.new(startPercent, 0, 1, 0)
                 
+                -- Add activation controls if enabled
+                if enableActivation then
+                    activationControls = Utility:CreateActivationControls(Frame, {
+                        ConfigPrefix = configKey .. "_activation",
+                        Window = Window,
+                        WidgetHeight = baseHeight,
+                        OnActivationChange = function(isActive)
+                            -- Re-evaluate callback when activation state changes
+                            if isActive then
+                                callback(currentValue)
+                            else
+                                callback(min) -- Use min value when not active
+                            end
+                        end
+                    })
+                    
+                    -- Register config callbacks for activation settings
+                    Window._configCallbacks[configKey .. "_activation_mode"] = function(val)
+                        if activationControls then
+                            activationControls.loadFromConfig(val, nil)
+                        end
+                    end
+                    Window._configCallbacks[configKey .. "_activation_key"] = function(val)
+                        if activationControls then
+                            activationControls.loadFromConfig(nil, val)
+                        end
+                    end
+                end
+                
                 -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     setValue(val, false) -- false = DO trigger callback so feature activates
@@ -1575,11 +2052,13 @@ end
                 Window._configValues[configKey] = currentValue
                 
                 table.insert(Window.Elements, {Type = "Slider", Name = sName, Obj = Frame, Section = title, Tab = name, Container = Container})
-    return {
+                return {
                     Frame = Frame,
-        Set = function(_, val) setValue(val) end,
+                    Set = function(_, val) setValue(val) end,
                     Get = function() return currentValue end,
-                    SetVisible = function(_, visible) Frame.Visible = visible end
+                    SetVisible = function(_, visible) Frame.Visible = visible end,
+                    IsActive = function() return activationControls and activationControls.isActive() or true end,
+                    GetActivation = function() return activationControls end
                 }
             end
             
