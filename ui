@@ -385,7 +385,7 @@ function Utility:CreateActivationControls(parentFrame, opts)
         Position = UDim2.new(1, -24, 0, 6),
         AnchorPoint = Vector2.new(0, 0),
         BackgroundTransparency = 1,
-        Image = "rbxassetid://12369278424",
+        Image = "rbxassetid://6793572208",
         ImageColor3 = Theme.SubText,
         AutoButtonColor = false,
         Parent = parentFrame,
@@ -475,11 +475,11 @@ function Utility:CreateActivationControls(parentFrame, opts)
             Utility:Tween(ActivationContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, containerHeight)})
             -- +4 gap above panel +4 breathing room below
             Utility:Tween(parentFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, widgetHeight + 4 + containerHeight + 4)})
-            Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {ImageColor3 = Theme.Accent})
+            ActivationBtn.ImageColor3 = Color3.new(1, 1, 1)
         else
             Utility:Tween(ActivationContainer, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
             Utility:Tween(parentFrame, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, widgetHeight)})
-            Utility:Tween(ActivationBtn, TweenInfo.new(0.15), {ImageColor3 = Theme.SubText})
+            ActivationBtn.ImageColor3 = Theme.SubText
             task.delay(0.15, function()
                 if not expanded then
                     ActivationContainer.Visible = false
@@ -3781,4 +3781,5 @@ function Library.new(opts)
     
     return Window
 end
+
 return Library
