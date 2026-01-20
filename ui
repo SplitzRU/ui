@@ -482,9 +482,9 @@ function Utility:CreateActivationControls(parentFrame, opts)
             task.delay(0.15, function()
                 if not expanded then
                     ActivationContainer.Visible = false
-                end
-            end)
         end
+    end)
+end
     end)
     
     -- Mode button clicks
@@ -528,8 +528,8 @@ function Utility:CreateActivationControls(parentFrame, opts)
                 -- Save to config
                 if Window and Window._configValues then
                     Window._configValues[configPrefix .. "_key"] = input.KeyCode.Name
-                end
-            end
+    end
+end
         end)
     end)
     
@@ -582,7 +582,7 @@ function Utility:CreateActivationControls(parentFrame, opts)
         -- Check if feature should be active right now
         isActive = function()
             if activationMode == ACTIVATION_MODES.ALWAYS then
-                return true
+        return true
             elseif activationMode == ACTIVATION_MODES.HOLD then
                 return activationKey and ActiveKeys[activationKey] or false
             elseif activationMode == ACTIVATION_MODES.TOGGLE then
@@ -647,9 +647,9 @@ function Library.new(opts)
     local screenSize = workspace.CurrentCamera.ViewportSize
     local mainSize
     if IS_MOBILE then
-        -- Mobile: Use percentage of screen, max out at reasonable size
-        local width = math.min(screenSize.X * 0.95, 780)
-        local height = math.min(screenSize.Y * 0.85, 500)
+        -- Mobile: Use percentage of screen, max out at reasonable size (smaller)
+        local width = math.min(screenSize.X * 0.80, 650)
+        local height = math.min(screenSize.Y * 0.75, 450)
         mainSize = UDim2.new(0, width, 0, height)
     else
         -- Desktop: Fixed size
@@ -675,8 +675,8 @@ function Library.new(opts)
     if IS_MOBILE then
         workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
             local newScreenSize = workspace.CurrentCamera.ViewportSize
-            local newWidth = math.min(newScreenSize.X * 0.95, 780)
-            local newHeight = math.min(newScreenSize.Y * 0.85, 500)
+            local newWidth = math.min(newScreenSize.X * 0.80, 650)
+            local newHeight = math.min(newScreenSize.Y * 0.75, 450)
             Main.Size = UDim2.new(0, newWidth, 0, newHeight)
         end)
     end
@@ -1129,6 +1129,7 @@ function Library.new(opts)
     -- Intro Animation
     local function Open()
         ScreenGui.Enabled = true
+        Main.Visible = true  -- Make sure Main is visible
         Scale.Scale = 0.9
         Main.BackgroundTransparency = 0.1
         Utility:Tween(Scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
@@ -1139,7 +1140,8 @@ function Library.new(opts)
         local closeTween = Utility:Tween(Scale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.9})
         Utility:Tween(Main, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 0.5})
         closeTween.Completed:Connect(function()
-            ScreenGui.Enabled = false
+            -- Only hide Main window, not the entire ScreenGui (so mobile toggle stays visible)
+            Main.Visible = false
         end)
     end
     
@@ -1165,8 +1167,8 @@ function Library.new(opts)
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
-                end
-            end)
+        end
+    end)
         end
     end)
     
@@ -1691,7 +1693,7 @@ function Library.new(opts)
             function Section:AddToggle(opts)
                 local tName = opts.Name or "Toggle"
                 local configKey = opts.ConfigKey or tName
-                local state = opts.Default or false
+    local state = opts.Default or false
                 local callback = opts.Callback or function() end
                 local enableActivation = opts.EnableActivation or false
                 
@@ -1735,7 +1737,7 @@ function Library.new(opts)
                 Utility:Corner(Knob, 8)
                 
                 local function Update()
-                    if state then
+        if state then
                         Utility:Tween(Switch, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 70, 70)})
                         Utility:Tween(Knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, -8), BackgroundColor3 = Color3.new(1,1,1)})
                     else
@@ -1753,18 +1755,18 @@ function Library.new(opts)
                         end
                     else
                         callback(val)
-                    end
-                end
-                
-                local function setState(val, skipCallback)
-                    state = val
+        end
+    end
+    
+    local function setState(val, skipCallback)
+        state = val
                     Update()
                     Window._configValues[configKey] = state
                     if not skipCallback then
                         wrappedCallback(state)
-                    end
-                end
-                
+        end
+    end
+    
                 Frame.MouseButton1Down:Connect(function()
                     Utility:Tween(Knob, TweenInfo.new(0.1), {Size = UDim2.new(0, 14, 0, 14)})
                 end)
@@ -1820,7 +1822,7 @@ function Library.new(opts)
                 Update()
                 
                 table.insert(Window.Elements, {Type = "Toggle", Name = tName, Obj = Frame, Section = title, Tab = name, Container = Container})
-                return {
+    return {
                     Set = function(_, s) setState(s) end,
                     Get = function() return state end,
                     SetVisible = function(_, visible) Frame.Visible = visible end,
@@ -1832,8 +1834,8 @@ function Library.new(opts)
             function Section:AddSlider(opts)
                 local sName = opts.Name or "Slider"
                 local configKey = opts.ConfigKey or sName
-                local min = opts.Min or 0
-                local max = opts.Max or 100
+    local min = opts.Min or 0
+    local max = opts.Max or 100
                 local def = opts.Default or min
                 local increment = opts.Increment or 1
                 local callback = opts.Callback or function() end
@@ -2036,9 +2038,9 @@ function Library.new(opts)
                 Window._configValues[configKey] = currentValue
                 
                 table.insert(Window.Elements, {Type = "Slider", Name = sName, Obj = Frame, Section = title, Tab = name, Container = Container})
-                return {
+    return {
                     Frame = Frame,
-                    Set = function(_, val) setValue(val) end,
+        Set = function(_, val) setValue(val) end,
                     Get = function() return currentValue end,
                     SetVisible = function(_, visible) Frame.Visible = visible end,
                     IsActive = function() return activationControls and activationControls.isActive() or true end,
@@ -2259,7 +2261,7 @@ function Library.new(opts)
             function Section:AddMultiDropdown(opts)
                 local dName = opts.Name or "Multi Dropdown"
                 local configKey = opts.ConfigKey or dName
-                local options = opts.Options or {}
+    local options = opts.Options or {}
                 local callback = opts.Callback or function() end
                 local defaultSelected = opts.Default or {}
                 
@@ -2409,8 +2411,8 @@ function Library.new(opts)
                         ItemLabel.TextColor3 = Theme.Text
                         if not selected[opt] then
                             Utility:Tween(Item, TweenInfo.new(0.15), {BackgroundTransparency = 0.8})
-                        end
-                    end)
+            end
+        end)
                     
                     Item.MouseLeave:Connect(function()
                         ItemLabel.TextColor3 = Theme.SubText
@@ -2429,7 +2431,7 @@ function Library.new(opts)
                 end
                 
                 -- Create initial options
-                for _, opt in ipairs(options) do
+    for _, opt in ipairs(options) do
                     createOption(opt)
                 end
                 
@@ -2460,9 +2462,9 @@ function Library.new(opts)
                                 List.Visible = false
                             end
                         end)
-                    end
-                end)
-                
+        end
+    end)
+    
                 -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     if type(val) == "table" then
@@ -2482,8 +2484,8 @@ function Library.new(opts)
                 Window._configValues[configKey] = getSelectedArray()
                 
                 table.insert(Window.Elements, {Type = "MultiDropdown", Name = dName, Obj = Frame, Section = title, Tab = name, Container = Container})
-                
-                return {
+    
+    return {
                     Set = function(_, values)
                         selected = {}
                         for _, v in ipairs(values) do
@@ -2542,7 +2544,7 @@ function Library.new(opts)
                         else
                             -- Keep only selections that exist in new options
                             local validOptions = {}
-                            for _, opt in ipairs(options) do
+            for _, opt in ipairs(options) do
                                 validOptions[opt] = true
                             end
                             for opt, _ in pairs(selected) do
@@ -2567,10 +2569,10 @@ function Library.new(opts)
                             Utility:Tween(Frame, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 32 + h + 5)})
                             Utility:Tween(List, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, h)})
                         end
-                    end
-                }
-            end
-            
+        end
+    }
+end
+
             function Section:AddKeybind(opts)
                 local kName = opts.Name or "Keybind"
                 local configKey = opts.ConfigKey or kName
@@ -2655,9 +2657,9 @@ function Library.new(opts)
                             Utility:Tween(BindBtn, TweenInfo.new(0.2), {TextColor3 = Theme.SubText})
                             Utility:Tween(BindStroke, TweenInfo.new(0.2), {Color = Theme.Outline})
                         end
-                    end
-                end)
-                
+        end
+    end)
+    
                 -- Register config callback (triggers actual callback so feature activates on config load)
                 Window._configCallbacks[configKey] = function(val)
                     if val then
@@ -2671,7 +2673,7 @@ function Library.new(opts)
                 end
                 
                 table.insert(Window.Elements, {Type = "Keybind", Name = kName, Obj = Frame, Section = title, Tab = name, Container = Container})
-                return {
+    return {
                     Frame = Frame,
                     Set = function(_, k) setKey(k) end,
                     Get = function() return key end,
@@ -2933,9 +2935,9 @@ function Library.new(opts)
                             elseif valueRef == "G" then gValue = updateSlider(x)
                             elseif valueRef == "B" then bValue = updateSlider(x) end
                             updatePreview()
-                        end
-                    end)
-                    
+        end
+    end)
+    
                     UserInputService.InputEnded:Connect(function(input)
                         if dragging then
                             dragging = false
@@ -3085,12 +3087,12 @@ function Library.new(opts)
                         PreviewBox.BackgroundTransparency = 1 - currentAlpha
                         Window._configValues[configKey] = {R = rValue, G = gValue, B = bValue, A = alphaValue}
                         callback(currentColor, currentAlpha) -- Trigger callback so feature activates
-                    end
-                end
+        end
+    end
                 Window._configValues[configKey] = {R = rValue, G = gValue, B = bValue, A = alphaValue}
-                
+    
                 table.insert(Window.Elements, {Type = "ColorPicker", Name = cName, Obj = Frame, Section = title, Tab = name, Container = Container})
-                return {
+    return {
                     Set = function(_, color, alpha)
                         alpha = alpha or 1
                         rValue = math.floor(color.R * 255)
